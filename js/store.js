@@ -2,6 +2,7 @@
 import * as db from "./db.js";
 import { LEX, LEX_BY_ID, TOTAL_TOKENS, dictForm, findLemma } from "./data.js";
 import { fsrs, generatorParameters, createEmptyCard, Rating, State } from "../vendor/ts-fsrs.mjs";
+import { prepWord, prepCards } from "./prepositions.js";
 
 export { Rating, State };
 
@@ -48,6 +49,11 @@ export function saveProfile(patch) {
 // A lexicon word only gets a stored record if the user edits it.
 export function word(id) {
   const stored = db.get("words", id);
+  if (id.startsWith("P:")) {
+    const p = prepWord(id);
+    if (!p) return null;
+    return { ...p, english: stored?.english || p.english, edited: !!stored };
+  }
   if (id.startsWith("L:")) {
     const l = LEX_BY_ID.get(id.slice(2));
     if (!l) return stored || null;
@@ -94,6 +100,7 @@ const BUILTIN = [
   { id: "smart:verbs", name: "Verbs (10+ times)", test: (l) => l.p === "verb" && l.f >= 10 },
   { id: "smart:adj", name: "Adjectives (10+ times)", test: (l) => l.p === "adjective" && l.f >= 10 },
   { id: "smart:prep", name: "Prepositions", test: (l) => l.p === "preposition" && l.f >= 5 },
+  { id: "smart:prepcase", name: "Prepositions by case", desc: "One card per preposition and case: διά + genitive = through, διά + accusative = on account of", ids: () => prepCards().map((c) => c.id) },
   { id: "smart:conj", name: "Conjunctions, particles & adverbs (10+)", test: (l) => ["conjunction", "particle", "adverb"].includes(l.p) && l.f >= 10 },
 ];
 let builtinCache = null;
@@ -101,7 +108,7 @@ function builtinWords(def) {
   builtinCache ||= {};
   if (!builtinCache[def.id]) {
     const src = LEX.filter((l) => !l.pn);
-    builtinCache[def.id] = (def.top ? src.slice(0, def.top) : src.filter(def.test)).map((l) => "L:" + l.id);
+    builtinCache[def.id] = def.ids ? def.ids() : (def.top ? src.slice(0, def.top) : src.filter(def.test)).map((l) => "L:" + l.id);
   }
   return builtinCache[def.id];
 }

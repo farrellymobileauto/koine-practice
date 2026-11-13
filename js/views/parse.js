@@ -7,6 +7,7 @@ import { gk } from "../gloss.js";
 import * as M from "../morph.js";
 import { paradigm } from "../paradigms.js";
 import { go, route } from "../app.js";
+import { prepItems, samplePrep, runPrepSession } from "./prepdrill.js";
 
 const LS = "koine.parsePrefs";
 const DEFAULTS = { mode: "nouns", task: "recognize", source: "both", maxCh: 0, nounCats: null, tenses: null, moods: null, askDecl: false, length: 15 };
@@ -56,6 +57,9 @@ export function parseHome(el) {
   add(el, h("div.page-head", h("h1", "Parse")), body);
   M.loadForms().then(() => {
     if (pending) { const s = pending; pending = null; return runSession(el, s); }
+    if ((params.get("go") || params.get("quick")) && p.mode === "preps") {
+      return prepItems().then((all) => runPrepSession(el, samplePrep(all, params.get("quick") ? 10 : p.length), () => { clear(el); parseHome(el); }));
+    }
     if (params.get("go") || params.get("quick")) {
       if (params.get("quick")) p.length = 10;
       const items = M.sample(poolFor(p), p.length);
@@ -67,6 +71,7 @@ export function parseHome(el) {
 
 function setup(body, p) {
   clear(body);
+  if (p.mode === "preps") return prepSetup(body, p);
   const count = h("div.small.muted");
   const refresh = () => {
     const n = poolFor(p).length;
@@ -106,7 +111,7 @@ function setup(body, p) {
 
   add(body,
     h("div.card.stack",
-      h("div.row", seg("mode", [["nouns", "Nouns & pronouns"], ["verbs", "Verbs"]]), seg("task", [["recognize", "Recognize"], ["produce", "Produce"]])),
+      h("div.row", seg("mode", [["nouns", "Nouns & pronouns"], ["verbs", "Verbs"], ["preps", "Prepositions"]]), seg("task", [["recognize", "Recognize"], ["produce", "Produce"]])),
       h("div.small.muted", p.task === "recognize" ? "See a form and give its parsing. Any valid parsing counts." : "Get a lexical form and a parsing, then type the Greek form (accents optional)."),
       h("div.small.muted", "Forms from"),
       seg("source", [["both", "Paradigms + real NT forms"], ["paradigm", "Paradigms only"], ["real", "Real NT forms only"]]),
@@ -123,6 +128,28 @@ function setup(body, p) {
       h("p", "Middle and passive share forms in the present, imperfect and perfect, so either answer is right there. Deponent forms count as middle (or passive for -θη- forms)."),
       h("p", { style: { margin: 0 } }, "Keyboard: Enter checks and moves on.")));
   refresh();
+}
+
+function prepSetup(body, p) {
+  const modeSeg = h("div.seg", [["nouns", "Nouns & pronouns"], ["verbs", "Verbs"], ["preps", "Prepositions"]].map(([v, l]) =>
+    h("button", { "aria-pressed": String(p.mode === v), onclick: () => { p.mode = v; savePrefs(p); setup(body, p); } }, l)));
+  const len = h("select.input", [10, 15, 20, 30, 50].map((n) => h("option", { value: n, selected: n === p.length }, `${n} phrases`)));
+  len.addEventListener("change", () => { p.length = +len.value; savePrefs(p); });
+  const count = h("div.small.muted", "Loading phrases…");
+  const startBtn = h("button.btn.primary.big.block", { disabled: true }, icon("play"), "Start");
+  add(body, h("div.card.stack",
+    modeSeg,
+    h("p.small.muted", { style: { margin: 0 } }, "See a real NT phrase like διὰ τοῦ νόμου and pick what the preposition means there. The answer depends on the case of the word that follows (genitive, dative or accusative). Only prepositions with more than one meaning are drilled: διά, ἐπί, κατά, μετά, παρά, περί, ὑπέρ, ὑπό."),
+    h("label.field", "Session length", len),
+    count, startBtn),
+    h("div.section-title", "Tip"),
+    h("div.card.small.muted", "To learn the meanings first, study the “Prepositions by case” list in Vocab. It has one card per preposition and case."));
+  prepItems().then((all) => {
+    count.textContent = `${all.length.toLocaleString()} phrases in the NT`;
+    startBtn.disabled = false;
+    startBtn.onclick = () => runPrepSession(body.parentElement, samplePrep(all, p.length), () => { clear(body.parentElement); parseHome(body.parentElement); });
+  });
+  savePrefs(p);
 }
 
 // ---------------- session ----------------

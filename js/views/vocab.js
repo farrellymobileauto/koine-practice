@@ -314,7 +314,8 @@ export function studyView(el) {
     const isNew = !S.card(cur.wordId, cur.dir);
     const card = h("div.card.flash", { onclick: () => { if (g2e && !revealed) reveal(); } },
       h("div.tag", DIR_LABEL[cur.dir], isNew && !cram ? " · new" : ""),
-      h("div.prompt", { class: g2e ? "greek" : "" }, g2e ? w.greek : w.english));
+      h("div.prompt", { class: g2e ? "greek" : "" }, g2e ? w.greek : w.english),
+      !g2e && w.prepCase ? h("div.hint", `preposition + ${({ G: "genitive", D: "dative", A: "accusative" })[w.prepCase]}`) : null);
     if (g2e) {
       if (!revealed) add(card, h("div.hint", "Tap or press Space to show the answer"));
       else add(card, h("div.answer", w.english), h("div.hint", meta));

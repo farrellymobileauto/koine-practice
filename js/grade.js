@@ -68,7 +68,7 @@ export function grade(text, verse, learned = {}) {
     if (t.pn) return { i, state: "name" };
     const ctx = t.g || "";
     if (SKIP_POS.has(pos) || (pos === "pronoun" && /^(he|she|it|they|him|her|them|his|its|their|self|you|i|me|we|us|my|your|our)\b/i.test(ctx.trim() || (t.lx >= 0 ? LEX[t.lx].e : "")))) return { i, state: "skip" };
-    const lexAlts = (t.lx >= 0 ? LEX[t.lx].e : "").replace(/\//g, " ");
+    const lexAlts = (t.lx >= 0 ? (LEX[t.lx].prep ? Object.values(LEX[t.lx].prep).join(" ") : LEX[t.lx].e) : "").replace(/\//g, " ");
     if (!ctx && !lexAlts) return { i, state: "unknown" };
     let keys = new Set([...contentWords(ctx), ...allWords(lexAlts).filter((w) => !WEAK.includes(w))].map(stem).filter((k) => k.length > 1));
     if (!contentWords(ctx).length) keys = new Set([...allWords(ctx), ...allWords(lexAlts)].filter((w) => !["the", "a", "an"].includes(w)).map(stem));

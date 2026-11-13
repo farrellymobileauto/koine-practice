@@ -1,5 +1,6 @@
 import { initDB, onChange, isMemoryOnly } from "./db.js";
 import { loadLexicon } from "./data.js";
+import { applyPrepGlosses } from "./prepositions.js";
 import { h, add, clear, icon, toast } from "./ui.js";
 import { initGloss, closeGloss } from "./gloss.js";
 import * as S from "./store.js";
@@ -114,7 +115,7 @@ export function applyTheme() {
 
 async function boot() {
   await initDB();
-  try { await loadLexicon(); }
+  try { await loadLexicon(); applyPrepGlosses(); }
   catch (e) {
     document.getElementById("view").innerHTML = "<div class='boot'>Couldn't load data/lexicon.json. Open this app through a local web server (see README), not by double-clicking index.html.</div>";
     return;
