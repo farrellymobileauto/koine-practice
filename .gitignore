@@ -1,0 +1,9 @@
+# raw downloads used by tools/build_data.py (the built JSON in data/ IS committed)
+data-src/
+__pycache__/
+.DS_Store
+Thumbs.db
+
+# local tool config
+.claude/
+node_modules/

@@ -1,0 +1,12 @@
+{
+  "name": "koine-practice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Daily Koine Greek practice: vocab, parsing, paradigms and translation",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "start:lan": "node tools/serve.mjs --lan",
+    "build:data": "python -I tools/build_data.py data-src data"
+  }
+}

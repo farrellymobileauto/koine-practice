@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Koine Practice</title>
+  <meta name="description" content="Daily Koine Greek practice: vocab, parsing, paradigms and translation from the THGNT and LXX.">
+  <meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16140f" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <script>
+    // Apply saved theme/accent before first paint (no flash).
+    try { var l = JSON.parse(localStorage.getItem("koine.look") || "{}"); var d = document.documentElement;
+      if (l.t === "light" || l.t === "dark") d.dataset.theme = l.t; if (l.a && l.a !== "terracotta") d.dataset.accent = l.a; } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#" onclick="document.getElementById('view').focus(); return false;">Skip to content</a>
+  <div class="app">
+    <nav class="sidebar" aria-label="Main"></nav>
+    <main id="view" tabindex="-1">
+      <div class="boot">Loading Greek data…</div>
+    </main>
+    <nav class="tabbar" aria-label="Main"></nav>
+  </div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
