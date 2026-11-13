@@ -50,7 +50,7 @@ export function profileView(el) {
         h("h2", "Practice"),
         h("div.grid.two",
           field("Daily goal (reviews)", num("dailyGoal", 5, 500), "Hitting this, or finishing the verse of the day, counts for your streak."),
-          field("New words per day", num("newPerDay", 0, 100), "Spaced-review sessions introduce at most this many new cards a day.")),
+          field("New words in Today's practice", num("newPerDay", 0, 100), "How many new words the Today button adds each day from the list below. Studying a list from the Vocab tab has no limit.")),
         h("div.grid.two",
           field("New words in Today's practice come from", select("newSource", lists.map((l) => [l.id, l.name]))),
           field("Today's practice direction", dirSel)),
@@ -76,7 +76,7 @@ export function profileView(el) {
 
       h("div.card.small.muted",
         h("h2", "Sources & credits"),
-        h("p", "App version: ", h("code", "v8")),
+        h("p", "App version: ", h("code", "v9")),
         h("p", "Greek NT text: Tyndale House Greek New Testament (THGNT) readings, grammar tags and glosses from STEPBible's TAGNT, by Tyndale House Cambridge & STEPBible.org, CC BY 4.0 (", h("a", { href: "https://github.com/STEPBible/STEPBible-Data", target: "_blank", rel: "noopener" }, "STEPBible-Data"), "). English glosses are based on the Berean Study Bible. Dictionary forms come from the TBESG lexicon (Abbott-Smith). The data was reformatted for this app: only THGNT words are kept and glosses are shortened."),
         h("p", "Septuagint: Brenton's Greek text and English translation (1851, public domain, via eBible.org). Lemmas and parsing are computer-assigned by looking up each form in the THGNT's tags and in the QuantForge Swete LXX analyses (CC BY-SA 4.0), so they can be wrong for ambiguous forms. NT English: Berean Standard Bible (public domain)."),
         h("p", "Spaced repetition: ts-fsrs (MIT)."))));

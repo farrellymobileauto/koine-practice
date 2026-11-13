@@ -43,7 +43,7 @@ export function vocabHome(el) {
     if (p.mode === "cram") { counts.textContent = `${ids.length} words · cram mode doesn't change your review schedule`; return; }
     const q = S.buildQueue(ids, { dirs: p.dirs });
     const due = q.filter((x) => x.due).length;
-    counts.textContent = `${due} due · ${q.length - due} new (limit ${S.profile().newPerDay}/day, ${S.newRemainingToday()} left today) · ${ids.length} words`;
+    counts.textContent = `${due} due · ${q.length - due} new · ${ids.length} words`;
   }
   function start() {
     const ids = [...new Set(all.filter((l) => selected.has(l.id)).flatMap((l) => l.wordIds))];
@@ -402,7 +402,7 @@ export function studyView(el) {
     const pct = reviewed ? Math.round((100 * correct) / reviewed) : 0;
     add(stage, h("div.card.stack", { style: { textAlign: "center", padding: "28px" } },
       h("h2", { style: { justifyContent: "center" } }, total === 0 ? "Nothing to review right now" : "Session complete"),
-      total === 0 ? h("p.muted", "No cards are due and you've reached today's new-word limit for these lists. Try Cram mode, pick more lists, or raise the daily new-word limit in Profile.") :
+      total === 0 ? h("p.muted", "No cards are due and every word in these lists has been introduced. Come back when reviews are due, try Cram mode, or pick more lists.") :
         h("div.kpis", h("div.kpi", h("b", reviewed), h("span", "cards")), h("div.kpi", h("b", pct + "%"), h("span", "first-try correct")), h("div.kpi", h("b", S.today().reviews), h("span", "reviews today"))),
       missed.length ? h("p.small.muted", `Missed: ${[...new Set(missed)].map((id) => S.word(id)?.greek.split(",")[0]).join(", ")}`) : null,
       h("div.row", { style: { justifyContent: "center" } },

@@ -207,7 +207,8 @@ export function wordKnown(wordId) {
 }
 
 /** Build a study queue. mode: "srs" | "cram". dirs: ["g2e"], ["e2g"] or both. */
-export function buildQueue(wordIds, { mode = "srs", dirs = ["g2e"], newLimit = null } = {}) {
+/** newLimit: max new cards to introduce (default: no limit). Today's practice passes its own daily amount. */
+export function buildQueue(wordIds, { mode = "srs", dirs = ["g2e"], newLimit = Infinity } = {}) {
   const now = new Date();
   const items = [];
   const fresh = [];
@@ -221,7 +222,7 @@ export function buildQueue(wordIds, { mode = "srs", dirs = ["g2e"], newLimit = n
   }
   if (mode === "cram") return shuffle(items);
   items.sort((a, b) => a.due - b.due);
-  const limit = newLimit ?? newRemainingToday();
+  const limit = newLimit ?? Infinity;
   // introduce new cards in list order, both directions of a word together
   return [...items, ...fresh.slice(0, Math.max(0, limit))];
 }
@@ -256,6 +257,7 @@ export function activityByDay() {
   return out;
 }
 export function today() { return activityByDay()[dayKey()] || { reviews: 0, correct: 0, newCards: 0, mistakes: 0, votd: 0, placement: 0, parse: 0, paradigm: 0, translate: 0 }; }
+/** New words Today's practice may still add today. */
 export function newRemainingToday() { return Math.max(0, profile().newPerDay - today().newCards); }
 
 export function goalMet(d, goal = profile().dailyGoal) {

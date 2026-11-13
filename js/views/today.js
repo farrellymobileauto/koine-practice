@@ -53,7 +53,7 @@ export default function today(el) {
     for (const w of newSrc.wordIds) ids.add(w);
     return [...ids];
   };
-  const q = S.buildQueue(dailyIds(), { dirs: p.dailyDirs || ["g2e"] });
+  const q = S.buildQueue(dailyIds(), { dirs: p.dailyDirs || ["g2e"], newLimit: S.newRemainingToday() });
 
   add(el, 
     h("div.card.hero",
