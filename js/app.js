@@ -136,6 +136,9 @@ async function boot() {
     window.scrollTo(0, y);
   });
   sync.onStatus((s) => { syncStatus = s; updateSyncDot(); });
+  let pending = null;
+  try { pending = sessionStorage.getItem("koine.pair"); sessionStorage.removeItem("koine.pair"); } catch {}
+  if (pending && !location.hash.startsWith("#/pair/")) location.hash = "#/pair/" + pending;
   render();
   sync.startAutoSync();
   if (isMemoryOnly()) toast("Storage is blocked in this browser. Progress won't be saved.", "bad");

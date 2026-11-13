@@ -76,6 +76,7 @@ export function profileView(el) {
 
       h("div.card.small.muted",
         h("h2", "Sources & credits"),
+        h("p", "App version: ", h("code", "v7")),
         h("p", "Greek NT text: Tyndale House Greek New Testament (THGNT) readings, grammar tags and glosses from STEPBible's TAGNT, by Tyndale House Cambridge & STEPBible.org, CC BY 4.0 (", h("a", { href: "https://github.com/STEPBible/STEPBible-Data", target: "_blank", rel: "noopener" }, "STEPBible-Data"), "). English glosses are based on the Berean Study Bible. Dictionary forms come from the TBESG lexicon (Abbott-Smith). The data was reformatted for this app: only THGNT words are kept and glosses are shortened."),
         h("p", "Septuagint: Brenton's Greek text and English translation (1851, public domain, via eBible.org). Lemmas and parsing are computer-assigned by looking up each form in the THGNT's tags and in the QuantForge Swete LXX analyses (CC BY-SA 4.0), so they can be wrong for ambiguous forms. NT English: Berean Standard Bible (public domain)."),
         h("p", "Spaced repetition: ts-fsrs (MIT)."))));
@@ -214,12 +215,22 @@ export function pairView(el, payload) {
   const connect = async () => {
     status.textContent = "Connecting…";
     try {
-      await sync.testConnection(cfg.u, cfg.t);
+      const onServer = await sync.testConnection(cfg.u, cfg.t);
       sync.saveConfig(cfg.u, cfg.t);
       sync.startAutoSync();
       await sync.syncNow();
-      toast("Signed in. Your progress is syncing.");
-      go("today");
+      let last = null;
+      sync.onStatus((st) => { last = st; })();
+      if (last?.state === "error") throw new Error(last.message);
+      const cards = S.db.all("cards").length, words = S.db.all("lists").length;
+      clear(status);
+      add(status,
+        h("div.verdict.ok", { role: "status" }, "Signed in"),
+        h("p.small", `The server had ${onServer} saved record${onServer === 1 ? "" : "s"}. This device now has ${cards} flashcard${cards === 1 ? "" : "s"} and ${words} list${words === 1 ? "" : "s"}.`),
+        onServer === 0 ? h("p.small.muted", "The server is empty, so there was nothing to download. On your other device, open Profile → Sync and press “Sync now” to upload its progress, then come back here and sign in again.") : null,
+        /iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone ? h("p.small.muted", "On iPhone, the home-screen app keeps its own storage, separate from Safari. If you use the home-screen app, sign in there too: open it, go to Profile → Sync, and paste this sign-in link.") : null,
+        h("div.row", h("a.btn.primary", { href: "#/today" }, "Go to Today"),
+          h("button.btn", { onclick: async () => { try { await navigator.clipboard.writeText(pairLink(cfg.u, cfg.t)); toast("Sign-in link copied"); } catch {} } }, "Copy sign-in link")));
     } catch (e) { status.textContent = "Couldn't connect: " + e.message; }
   };
   add(el,

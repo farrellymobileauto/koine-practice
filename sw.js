@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever you deploy changes so phones pick them up.
-const VERSION = "v6";
+const VERSION = "v7";
 const CACHE = "koine-" + VERSION;
 const SHELL = [
   "./", "index.html", "css/app.css", "manifest.webmanifest", "icon.svg", "icon-192.png",
@@ -30,7 +30,7 @@ self.addEventListener("fetch", (e) => {
   }
   // App files: network first so updates show up right away; cache when offline.
   e.respondWith(
-    fetch(e.request).then(save).catch(() =>
+    fetch(e.request, { cache: "no-cache" }).then(save).catch(() =>
       caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || (e.request.mode === "navigate" ? caches.match("index.html") : Response.error())))
   );
 });

@@ -16,6 +16,8 @@
   <link rel="stylesheet" href="css/app.css">
   <script>
     // Apply saved theme/accent before first paint (no flash).
+    // Keep a sign-in link's payload even if routing or an old cached version interferes.
+    try { var pm = location.hash.match(/^#\/pair\/([A-Za-z0-9_-]+)/); if (pm) sessionStorage.setItem("koine.pair", pm[1]); } catch (e) {}
     try { var l = JSON.parse(localStorage.getItem("koine.look") || "{}"); var d = document.documentElement;
       if (l.t === "light" || l.t === "dark") d.dataset.theme = l.t; if (l.a && l.a !== "terracotta") d.dataset.accent = l.a; } catch (e) {}
   </script>
