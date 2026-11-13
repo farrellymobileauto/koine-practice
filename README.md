@@ -48,7 +48,7 @@ turso db show koine --url
 turso db tokens create koine
 ```
 
-Paste the URL and token into Profile on each device. They're stored only in that browser (IndexedDB), never in the code, so the public site doesn't expose your database. Data is local-first: everything works offline and syncs when it can (last write wins per record).
+Paste the URL and token into Profile on **one** device. Then, under **Sign in another device**, scan the QR code with your phone (or copy the link to yourself) and the phone connects to the same database. The details are stored only in each browser (IndexedDB), never in the code, so the public site doesn't expose your database. The sign-in link carries the token in the URL fragment, which isn't sent to the web server. Still, treat the link like a password. Data is local-first: everything works offline and syncs when it can (last write wins per record).
 
 ## Files
 
@@ -122,5 +122,6 @@ Greek that matches an NT word gets linked to it (frequency, tap-to-gloss, covera
 - Greek NT: Tyndale House GNT readings, grammar and glosses from **STEPBible TAGNT** (Tyndale House Cambridge & STEPBible.org, CC BY 4.0). English glosses are based on the Berean Study Bible. Dictionary forms come from TBESG (Abbott-Smith). Changes: only THGNT words are kept, transliterations and versification brackets are removed, and glosses are shortened.
 - Septuagint: Brenton's Greek Septuagint (1851, public domain, via eBible.org). Lemmas and parsing are computer-assigned using the THGNT tags and the Morpheus analyses from the [QuantForge LXX](https://github.com/QuantForgeSoftware/lxx) project (**CC BY-SA 4.0**). Because of that, the files in `data/lxx/` are shared under CC BY-SA 4.0.
 - English: Berean Standard Bible (public domain) and Brenton's 1851 English Septuagint (public domain, via eBible.org).
+- QR codes: [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase (MIT).
 - Scheduling: [ts-fsrs](https://github.com/open-spaced-repetition/ts-fsrs) (MIT).
 - Fonts: Gentium Book Plus (SIL OFL) and Inter (OFL), via Google Fonts.

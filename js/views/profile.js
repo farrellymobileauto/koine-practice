@@ -133,21 +133,103 @@ function syncCard() {
   };
   add(card, 
     h("h2", icon("sync"), "Sync (Turso)"),
-    h("p.small.muted", "Connect a Turso database to keep your laptop and phone in sync. The URL and token are stored only in this browser, never in the app's code, so it's safe to host the site publicly. Use a token scoped to this one database. Enter the same details on each device."),
+    h("p.small.muted", "Connect a Turso database to keep your laptop and phone in sync. The URL and token are stored only in this browser, never in the app's code. Set it up once here, then sign in your other devices with the QR code below."),
     h("label.field", "Database URL", url),
     h("label.field", "Auth token", token),
     h("div.row", h("button.btn.primary", { onclick: connect }, sync.configured() ? "Save & reconnect" : "Connect"),
       sync.configured() ? h("button.btn", { onclick: () => sync.syncNow() }, "Sync now") : null,
       sync.configured() ? h("button.btn.ghost", { onclick: () => { sync.disconnect(); url.value = ""; token.value = ""; toast("Disconnected on this device"); } }, "Disconnect") : null),
     status,
+    sync.configured() ? pairingBox() : pasteLinkBox(),
     h("details.small",
       h("summary", "How to get these"),
       h("ol",
         h("li", "Create a database: ", h("code", "turso db create koine")),
         h("li", "Get its URL: ", h("code", "turso db show koine --url")),
         h("li", "Create a token for just that database: ", h("code", "turso db tokens create koine")),
-        h("li", "Paste both here, then do the same on your other device."))));
+        h("li", "Paste both here. On your other devices, use the “Sign in another device” QR code instead."))));
   return card;
+}
+
+/** QR code + link that carries this device's sync details to another device. */
+function pairingBox() {
+  const link = pairLink(sync.config().url, sync.config().token);
+  const qrHost = h("div.qr", { role: "img", "aria-label": "QR code for signing in another device" });
+  const box = h("div.pairbox.stack",
+    h("h3", { style: { margin: 0 } }, "Sign in another device"),
+    h("p.small.muted", { style: { margin: 0 } }, "Scan this with your phone's camera, or send yourself the link. The device that opens it connects to the same sync database and stays signed in."),
+    h("div.row", { style: { alignItems: "flex-start", gap: "16px" } },
+      qrHost,
+      h("div.stack", { style: { flex: 1, minWidth: "200px" } },
+        h("button.btn", { onclick: async () => { try { await navigator.clipboard.writeText(link); toast("Link copied"); } catch { prompt("Copy this link:", link); } } }, icon("copy", 16), "Copy sign-in link"),
+        navigator.share ? h("button.btn.ghost", { onclick: () => navigator.share({ title: "Koine Practice sign-in", url: link }).catch(() => {}) }, "Share…") : null,
+        h("p.tiny.muted", { style: { margin: 0 } }, "Anyone with this link can see and change your progress, so only send it to yourself."))));
+  import("../../vendor/qrcode.mjs").then(({ default: qrcode }) => {
+    const qr = qrcode(0, "L");
+    qr.addData(link);
+    qr.make();
+    qrHost.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 3, scalable: true });
+  }).catch(() => { qrHost.textContent = "QR code unavailable. Use the link."; });
+  return box;
+}
+
+function pasteLinkBox() {
+  const inp = h("input.input", { placeholder: "Paste a sign-in link from your other device", autocomplete: "off", spellcheck: "false" });
+  const go_ = () => {
+    const m = inp.value.match(/#\/pair\/([A-Za-z0-9_-]+)/);
+    if (!m) return toast("That doesn't look like a sign-in link", "bad");
+    location.hash = "#/pair/" + m[1];
+  };
+  return h("div.pairbox.stack",
+    h("h3", { style: { margin: 0 } }, "Already synced on another device?"),
+    h("p.small.muted", { style: { margin: 0 } }, "Open Profile → Sync there and scan its QR code, or paste its sign-in link here."),
+    h("div.row", inp, h("button.btn", { onclick: go_ }, "Sign in")));
+}
+
+const PUBLIC_URL = "https://farrellymobileauto.github.io/koine-practice/";
+export function pairLink(url, token) {
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  const base = local ? PUBLIC_URL : location.origin + location.pathname;
+  const payload = btoa(unescape(encodeURIComponent(JSON.stringify({ u: url, t: token })))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return base + "#/pair/" + payload;
+}
+
+/** #/pair/<payload>: connect this device using details from another device. */
+export function pairView(el, payload) {
+  el.dataset.live = "1";
+  // keep the token out of the address bar and history
+  try { history.replaceState(null, "", location.pathname + "#/pair"); } catch {}
+  let cfg = null;
+  try {
+    const json = decodeURIComponent(escape(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))));
+    cfg = JSON.parse(json);
+  } catch {}
+  if (!cfg?.u || !cfg?.t) {
+    add(el, h("div.page-head", h("h1", "Sign in")), h("div.card.empty", "This sign-in link is incomplete. Copy it again from your other device."));
+    return;
+  }
+  const host = cfg.u.replace(/^(libsql|https?):\/\//, "").split("/")[0];
+  const status = h("div.small.muted");
+  const already = sync.configured() && sync.config().url === cfg.u;
+  const connect = async () => {
+    status.textContent = "Connecting…";
+    try {
+      await sync.testConnection(cfg.u, cfg.t);
+      sync.saveConfig(cfg.u, cfg.t);
+      sync.startAutoSync();
+      await sync.syncNow();
+      toast("Signed in. Your progress is syncing.");
+      go("today");
+    } catch (e) { status.textContent = "Couldn't connect: " + e.message; }
+  };
+  add(el,
+    h("div.page-head", h("h1", "Sign in this device")),
+    h("div.card.stack",
+      h("p", already ? "This device is already connected to this sync database." : "Connect this device to your synced progress?"),
+      h("p.small.muted", "Database: ", h("code", host)),
+      h("p.small.muted", "Anything already saved on this device is merged in (the newest change wins). Nothing is deleted."),
+      h("div.row", h("button.btn.primary", { onclick: connect }, already ? "Sync now" : "Sign in & sync"), h("a.btn.ghost", { href: "#/today" }, "Cancel")),
+      status));
 }
 
 function dataCard() {

@@ -8,7 +8,7 @@ import * as sync from "./sync.js";
 import today from "./views/today.js";
 import { vocabHome, listView, studyView } from "./views/vocab.js";
 import mistakesView from "./views/mistakes.js";
-import { profileView, placementView } from "./views/profile.js";
+import { profileView, placementView, pairView } from "./views/profile.js";
 import { soonView, moreView } from "./views/more.js";
 import { parseHome } from "./views/parse.js";
 import { paradigmsHome, paradigmView } from "./views/paradigms.js";
@@ -35,6 +35,8 @@ const ROUTES = [
   [/^profile$/, () => profileView],
   [/^profile\/placement$/, () => placementView],
   [/^more$/, () => moreView],
+  [/^pair\/(.+)$/, (m) => (el) => pairView(el, m[1])],
+  [/^pair$/, () => (el) => { location.hash = "#/profile"; }],
   [/^parse$/, () => parseHome],
   [/^paradigms$/, () => paradigmsHome],
   [/^paradigms\/(.+)$/, (m) => (el) => paradigmView(el, decodeURIComponent(m[1]))],
