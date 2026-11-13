@@ -10,7 +10,7 @@ import { go, route } from "../app.js";
 import { prepItems, samplePrep, runPrepSession } from "./prepdrill.js";
 
 const LS = "koine.parsePrefs";
-const DEFAULTS = { mode: "nouns", task: "recognize", source: "both", maxCh: 0, nounCats: null, tenses: null, moods: null, askDecl: false, length: 15 };
+const DEFAULTS = { mode: "nouns", task: "recognize", source: "both", maxCh: 0, nounCats: null, tenses: null, moods: null, askDecl: false, withArticle: false, length: 15 };
 function prefs() {
   let p = DEFAULTS;
   try { p = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(LS) || "{}") }; } catch {}
@@ -101,6 +101,8 @@ function setup(body, p) {
   len.addEventListener("change", () => { p.length = +len.value; savePrefs(p); });
   const decl = h("input", { type: "checkbox", checked: p.askDecl });
   decl.addEventListener("change", () => { p.askDecl = decl.checked; savePrefs(p); });
+  const art = h("input", { type: "checkbox", checked: p.withArticle });
+  art.addEventListener("change", () => { p.withArticle = art.checked; savePrefs(p); });
 
   const startBtn = h("button.btn.primary.big.block", { onclick: () => {
     const items = M.sample(poolFor(p), p.length);
@@ -118,7 +120,8 @@ function setup(body, p) {
       h("label.field", "Grammar covered", ch, h("span.hint", "Only forms Mounce has taught by this chapter. Set your chapter in Profile.")),
       p.mode === "nouns"
         ? [h("div.small.muted", "Include"), chips("nounCats", M.NOUN_CATS),
-           h("label.check", decl, h("span", "Also ask the declension of nouns"))]
+           h("label.check", decl, h("span", "Also ask the declension of nouns")),
+           h("label.check", art, h("span", "Include the article with nouns and adjectives (τοῦ λόγου)", h("br"), h("span.small.muted", p.task === "produce" ? "You type the article and the form together." : "The article narrows the parsing down, like reading the word in a sentence.")))]
         : [h("div.small.muted", "Tenses"), chips("tenses", M.TENSE_CATS), h("div.small.muted", "Moods"), chips("moods", M.MOOD_CATS)],
       h("label.field", "Session length", len),
       count, startBtn),
@@ -158,6 +161,7 @@ function runSession(el, sess) {
   el.dataset.live = "1";
   const { items, task } = sess;
   const askDecl = prefs().askDecl;
+  const withArticle = prefs().withArticle && sess.mode === "nouns";
   let i = 0, right = 0;
   const misses = [];
   const bar = h("i", { style: { width: "0%" } });
@@ -187,14 +191,22 @@ function runSession(el, sess) {
     clear(stage);
     const ans = {};
     let done = false, logged = null;
-    const valid = it.parses.filter((p) => (sess.mode === "verbs" ? p.pos === "verb" : p.pos !== "verb"));
+    let valid = it.parses.filter((p) => (sess.mode === "verbs" ? p.pos === "verb" : p.pos !== "verb"));
+    // With the article shown, only the parsings that match it are valid (τῆς ὥρας = gen. sg., τὰς ὥρας = acc. pl.).
+    let art = null;
+    if (withArticle) {
+      const nominal = valid.filter((p) => M.articleFor(p));
+      const t = nominal.find((p) => it.target && M.keyOf(p) === M.keyOf(it.target)) || nominal[Math.floor(Math.random() * nominal.length)];
+      art = t ? M.articleFor(t) : null;
+      if (art) valid = valid.filter((p) => M.articleFor(p) && normalize(M.articleFor(p)) === normalize(art));
+    }
     const usesPerson = valid.some((p) => p.pos !== "verb" && !p.gender);
     const rowsWrap = h("div.stack");
     const feedback = h("div");
     const checkBtn = h("button.btn.primary.big.block", { disabled: true, onclick: () => (done ? next(lastOk) : check()) }, "Check");
     let lastOk = false;
 
-    const formEl = h("div.verse", { style: { fontSize: "2.6rem", margin: 0 } }, it.form);
+    const formEl = h("div.verse", { style: { fontSize: "2.6rem", margin: 0 } }, art ? h("span.art", art + " ") : null, it.form);
     const card = h("div.card.stack",
       h("div", { style: { textAlign: "center", padding: "14px 0 4px" } },
         h("div.tag.small.muted", it.source === "real" ? `${prettyRef(it.ref)} · real NT form` : "Paradigm form"), formEl),
@@ -242,7 +254,7 @@ function runSession(el, sess) {
       if (!ok) logged = logParseMistake(it, best, M.describe({ ...best, ...ans }), sess.mode);
       drawRows();
       clear(formEl);
-      add(formEl, it.lex ? gk(it.form, it.lex.i) : it.form);
+      add(formEl, art ? h("span.art", art + " ") : null, it.lex ? gk(it.form, it.lex.i) : it.form);
       const uniq = M.describeAll(valid);
       const tbl = M.paradigmFor(best || valid[0], it.lemma);
       clear(feedback);
@@ -272,9 +284,10 @@ function runSession(el, sess) {
   function produce(it) {
     clear(stage);
     const target = it.source === "paradigm" ? it.target : M.productionTarget([it.target]);
-    const answers = [...new Set([...(it.answers || []), ...M.formsFor(it.lemma, target)])];
+    const art = withArticle ? M.articleFor(target) : null;
+    const answers = [...new Set([...(it.answers || []), ...M.formsFor(it.lemma, target)])].map((a) => (art ? `${art} ${a}` : a));
     const lemmaLabel = it.lex ? dictForm(it.lex) : it.lemma;
-    const inp = greekInput(h("input.input.greek", { placeholder: "Type the form", style: { textAlign: "center" } }), S.profile().translit);
+    const inp = greekInput(h("input.input.greek", { placeholder: art ? "Type the article and the form" : "Type the form", style: { textAlign: "center" } }), S.profile().translit);
     const feedback = h("div");
     let done = false, ok = false, logged = null;
     const btn = h("button.btn.primary.big.block", { onclick: () => (done ? next(ok) : check()) }, "Check");

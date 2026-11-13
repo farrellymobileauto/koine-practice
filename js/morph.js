@@ -286,6 +286,19 @@ export function sample(items, n) {
   return out;
 }
 
+let ARTICLE = null;
+/** The article form that goes with a noun/adjective parse (e.g. G S M -> τοῦ), or null. */
+export function articleFor(p) {
+  if (!p || !p.gender || !p.case || !p.number || !["noun", "adj"].includes(p.pos)) return null;
+  if (!ARTICLE) {
+    ARTICLE = {};
+    for (const c of cellsOf(PARADIGMS.find((t) => t.id === "article"))) { const q = c.parses[0]; ARTICLE[q.case + q.number + q.gender] = c.display; }
+  }
+  const a = ARTICLE[p.case + p.number + p.gender];
+  // before a noun, an acute on the article becomes grave (τόν -> τὸν); circumflexes stay (τῆς)
+  return a ? a.normalize("NFD").replace(/́/g, "̀").normalize("NFC") : null;
+}
+
 /** Best paradigm table to show for a parse. */
 export function paradigmFor(p, lemmaG) {
   const fits = (t) => {

@@ -360,3 +360,4 @@ main:focus { outline: none; }
 
 .prep-hl { color: var(--accent); font-weight: 700; }
 .case-hl { text-decoration: underline 2px var(--accent); text-underline-offset: 6px; }
+.art { color: var(--muted); }
