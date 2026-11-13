@@ -10,12 +10,24 @@ import { go, route } from "../app.js";
 import { prepItems, samplePrep, runPrepSession } from "./prepdrill.js";
 
 const LS = "koine.parsePrefs";
-const DEFAULTS = { mode: "nouns", task: "recognize", source: "both", maxCh: 0, nounCats: null, tenses: null, moods: null, askDecl: false, withArticle: false, length: 15 };
+// Which parts of a parsing to ask for (each can be switched off). Participles use case/number/gender from verbAsk.
+const VERB_ASK = { tense: true, voice: true, mood: true, person: true, number: true, case: true, gender: true, lexical: false };
+const NOUN_ASK = { case: true, number: true, gender: true, person: true, decl: false, lexical: false };
+const DEFAULTS = { mode: "nouns", task: "recognize", source: "both", maxCh: 0, nounCats: null, tenses: null, moods: null, withArticle: false, length: 15 };
 function prefs() {
-  let p = DEFAULTS;
-  try { p = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(LS) || "{}") }; } catch {}
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(LS) || "{}"); } catch {}
+  const p = { ...DEFAULTS, ...saved };
+  p.verbAsk = { ...VERB_ASK, ...(saved.verbAsk || {}) };
+  p.nounAsk = { ...NOUN_ASK, ...(saved.nounAsk || {}) };
+  if (saved.askDecl && !saved.nounAsk) p.nounAsk.decl = true; // older setting
   if (!p.maxCh) p.maxCh = S.profile().chapter || 36;
   return p;
+}
+const askFor = (p, mode) => (mode === "verbs" ? p.verbAsk : p.nounAsk);
+/** The parts asked for this parse, given the toggles. */
+function askedDims(parse, ask) {
+  return M.dimsFor(parse, { askDecl: !!ask.decl }).filter((d) => ask[d]);
 }
 function savePrefs(p) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch {} }
 
@@ -47,6 +59,10 @@ function poolFor(p) {
   if (p.source !== "paradigm") items.push(...M.realItems());
   items = M.filterItems(items, { mode: p.mode, maxCh: p.maxCh, nounCats: p.nounCats, tenses: p.tenses, moods: p.moods });
   if (p.task === "produce") items = items.filter((it) => it.target && (it.source === "paradigm" || (it.lex && it.lex.f >= 50)));
+  else {
+    const ask = askFor(p, p.mode);
+    if (!ask.lexical) items = items.filter((it) => it.parses.some((q) => (p.mode === "verbs") === (q.pos === "verb") && askedDims(q, ask).length));
+  }
   return items;
 }
 
@@ -99,8 +115,21 @@ function setup(body, p) {
   ch.addEventListener("change", () => { p.maxCh = +ch.value; refresh(); });
   const len = h("select.input", [10, 15, 20, 30, 50].map((n) => h("option", { value: n, selected: n === p.length }, `${n} forms`)));
   len.addEventListener("change", () => { p.length = +len.value; savePrefs(p); });
-  const decl = h("input", { type: "checkbox", checked: p.askDecl });
-  decl.addEventListener("change", () => { p.askDecl = decl.checked; savePrefs(p); });
+  // "Ask for" toggles
+  const askOpts = p.mode === "verbs"
+    ? [["tense", "Tense"], ["voice", "Voice"], ["mood", "Mood"], ["person", "Person"], ["number", "Number"], ["case", "Case (ptc.)"], ["gender", "Gender (ptc.)"], ["lexical", "Lexical form"]]
+    : [["case", "Case"], ["number", "Number"], ["gender", "Gender"], ["person", "Person (ἐγώ/σύ)"], ["decl", "Declension"], ["lexical", "Lexical form"]];
+  const askObj = askFor(p, p.mode);
+  const askChips = h("div.chips", askOpts.map(([k, label]) => {
+    const b = h("button.chip", { "aria-pressed": String(!!askObj[k]), onclick: () => {
+      const next = { ...askObj, [k]: !askObj[k] };
+      if (!askOpts.some(([x]) => next[x])) return toast("Keep at least one part switched on", "bad");
+      askObj[k] = next[k];
+      b.setAttribute("aria-pressed", String(!!askObj[k]));
+      refresh();
+    } }, label);
+    return b;
+  }));
   const art = h("input", { type: "checkbox", checked: p.withArticle });
   art.addEventListener("change", () => { p.withArticle = art.checked; savePrefs(p); });
 
@@ -120,9 +149,11 @@ function setup(body, p) {
       h("label.field", "Grammar covered", ch, h("span.hint", "Only forms Mounce has taught by this chapter. Set your chapter in Profile.")),
       p.mode === "nouns"
         ? [h("div.small.muted", "Include"), chips("nounCats", M.NOUN_CATS),
-           h("label.check", decl, h("span", "Also ask the declension of nouns")),
+
            h("label.check", art, h("span", "Include the article with nouns and adjectives (τοῦ λόγου)", h("br"), h("span.small.muted", p.task === "produce" ? "You type the article and the form together." : "The article narrows the parsing down, like reading the word in a sentence.")))]
         : [h("div.small.muted", "Tenses"), chips("tenses", M.TENSE_CATS), h("div.small.muted", "Moods"), chips("moods", M.MOOD_CATS)],
+      p.task === "recognize" ? [h("div.small.muted", "Ask for"), askChips,
+        h("div.tiny.muted", p.mode === "verbs" ? "Switch off any part you don't want to identify. Case and gender only apply to participles; number applies to both." : "Switch off any part you don't want to identify. Person only applies to ἐγώ and σύ.")] : null,
       h("label.field", "Session length", len),
       count, startBtn),
     h("div.section-title", "Tips"),
@@ -160,7 +191,8 @@ function runSession(el, sess) {
   clear(el);
   el.dataset.live = "1";
   const { items, task } = sess;
-  const askDecl = prefs().askDecl;
+  const ask = askFor(prefs(), sess.mode);
+  const askDecl = !!ask.decl;
   const withArticle = prefs().withArticle && sess.mode === "nouns";
   let i = 0, right = 0;
   const misses = [];
@@ -214,16 +246,22 @@ function runSession(el, sess) {
     add(stage, card);
 
     const dims = () => {
+      let d;
       if (sess.mode === "verbs") {
-        const d = ["tense", "voice", "mood"];
-        if (ans.mood === "P") d.push("case", "number", "gender");
-        else if (ans.mood && ans.mood !== "N") d.push("person", "number");
-        return d;
+        d = ["tense", "voice", "mood"];
+        // if mood isn't asked, the form's own mood decides which rows follow
+        const mood = ask.mood ? ans.mood : valid[0]?.mood;
+        if (mood === "P") d.push("case", "number", "gender");
+        else if (mood && mood !== "N") d.push("person", "number");
+      } else {
+        d = ["case", "number", usesPerson ? "person" : "gender"];
+        if (askDecl && valid.some((p) => p.pos === "noun")) d.push("decl");
       }
-      const d = ["case", "number", usesPerson ? "person" : "gender"];
-      if (askDecl && valid.some((p) => p.pos === "noun")) d.push("decl");
-      return d;
+      return d.filter((x) => ask[x]);
     };
+    const lexInp = ask.lexical ? greekInput(h("input.input.greek", { placeholder: "Lexical form (e.g. λύω)", "aria-label": "Lexical form" }), S.profile().translit) : null;
+    if (lexInp) lexInp.addEventListener("input", () => { checkBtn.disabled = !done && !(dims().every((d) => ans[d] != null) && lexInp.value.trim()); });
+    const lexOk = () => !lexInp || headwordOk(lexInp.value, it);
     const OPTS = {
       tense: ["P", "I", "F", "A", "R"], voice: ["A", "M", "P"], mood: ["I", "S", "M", "N", "P"],
       case: ["N", "G", "D", "A"], number: ["S", "P"], gender: ["M", "F", "N"], person: ["1", "2", "3"], decl: ["1", "2", "3"],
@@ -239,15 +277,20 @@ function runSession(el, sess) {
           }, M.SHORT[d][v])));
         add(rowsWrap, row);
       }
-      checkBtn.disabled = !done && !dims().every((d) => ans[d] != null);
+      if (lexInp) add(rowsWrap, h("div.chips", h("span.dimlabel", "Lexical"), lexInp));
+      checkBtn.disabled = !done && !(dims().every((d) => ans[d] != null) && (!lexInp || lexInp.value.trim()));
       if (done) markRows();
     }
 
     let best = null;
     function check() {
-      const ok = valid.some((p) => M.dimsFor(p, { askDecl }).every((d) => ans[d] === p[d]) && dims().length === M.dimsFor(p, { askDecl }).length);
+      const shown = dims();
+      const parseOk = !shown.length || valid.some((p) => { const a = askedDims(p, ask); return a.length === shown.length && a.every((d) => ans[d] === p[d]); });
+      const lexRight = lexOk();
+      const ok = parseOk && lexRight;
       // closest valid parse, for marking
-      best = valid.map((p) => ({ p, n: M.dimsFor(p, { askDecl }).filter((d) => ans[d] === p[d]).length })).sort((a, b) => b.n - a.n)[0]?.p;
+      best = valid.map((p) => ({ p, n: askedDims(p, ask).filter((d) => ans[d] === p[d]).length })).sort((a, b) => b.n - a.n)[0]?.p;
+      if (lexInp) { lexInp.disabled = true; lexInp.classList.add(lexRight ? "lex-ok" : "lex-bad"); }
       done = true; lastOk = ok;
       S.bumpActivity({ reviews: 1, correct: ok ? 1 : 0, parse: 1 });
       S.recordParse(M.categoryLabel(best || valid[0]), ok);
@@ -261,6 +304,7 @@ function runSession(el, sess) {
       add(feedback,
         h("div.verdict", { role: "status",  class: ok ? "ok" : "no" }, ok ? "Correct" : "Not quite"),
         h("div", h("b", uniq.length > 1 ? "Valid parsings: " : "Parsing: "), uniq.join(" · or · ")),
+        lexInp ? h("div", h("b", "Lexical form: "), h("span.greek", it.lex ? dictForm(it.lex) : it.lemma), lexRight ? " ✓" : h("span", { style: { color: "var(--bad)" } }, ` (you wrote ${lexInp.value.trim() || "nothing"})`)) : null,
         it.lex ? h("div.small.muted", "From ", h("span.greek", dictForm(it.lex)), " · ", it.lex.e) : null,
         h("div.row", { style: { marginTop: "6px" } },
           tbl ? h("button.btn.sm", { onclick: () => modal(tbl.title, tableEl(tbl), { wide: true }) }, icon("paradigms", 16), "See paradigm") : null,
@@ -341,6 +385,14 @@ function runSession(el, sess) {
 
   show();
   return () => onKey && document.removeEventListener("keydown", onKey);
+}
+
+/** Lexical form check: accents optional; accepts the lemma with or without an article. */
+function headwordOk(typed, it) {
+  const t = normalize(typed).split(" ").filter((w) => !["ο", "η", "το"].includes(w)).join(" ");
+  if (!t) return false;
+  const opts = [it.lemma, it.lex?.g].filter(Boolean).map((g) => normalize(g.split(",")[0]));
+  return opts.includes(t);
 }
 
 function logParseMistake(it, p, answerText, mode, expectedOverride) {

@@ -76,7 +76,7 @@ export function profileView(el) {
 
       h("div.card.small.muted",
         h("h2", "Sources & credits"),
-        h("p", "App version: ", h("code", "v10")),
+        h("p", "App version: ", h("code", "v11")),
         h("p", "Greek NT text: Tyndale House Greek New Testament (THGNT) readings, grammar tags and glosses from STEPBible's TAGNT, by Tyndale House Cambridge & STEPBible.org, CC BY 4.0 (", h("a", { href: "https://github.com/STEPBible/STEPBible-Data", target: "_blank", rel: "noopener" }, "STEPBible-Data"), "). English glosses are based on the Berean Study Bible. Dictionary forms come from the TBESG lexicon (Abbott-Smith). The data was reformatted for this app: only THGNT words are kept and glosses are shortened."),
         h("p", "Septuagint: Brenton's Greek text and English translation (1851, public domain, via eBible.org). Lemmas and parsing are computer-assigned by looking up each form in the THGNT's tags and in the QuantForge Swete LXX analyses (CC BY-SA 4.0), so they can be wrong for ambiguous forms. NT English: Berean Standard Bible (public domain)."),
         h("p", "Spaced repetition: ts-fsrs (MIT)."))));

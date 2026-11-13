@@ -361,3 +361,6 @@ main:focus { outline: none; }
 .prep-hl { color: var(--accent); font-weight: 700; }
 .case-hl { text-decoration: underline 2px var(--accent); text-underline-offset: 6px; }
 .art { color: var(--muted); }
+.lex-ok { border-color: var(--good) !important; background: var(--good-soft) !important; }
+.lex-bad { border-color: var(--bad) !important; background: var(--bad-soft) !important; }
+.chips .input.greek { flex: 1; min-width: 160px; }
