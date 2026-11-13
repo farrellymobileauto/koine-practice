@@ -14,6 +14,16 @@ Then open http://localhost:5173. There's nothing to install (no dependencies); i
 
 To try it on your phone over Wi-Fi, run `npm run start:lan` and open the address it prints on the phone.
 
+## Deploy to GitHub Pages (free)
+
+GitHub Pages on a free account only works for **public** repos. A private repo needs GitHub Pro, so use Render instead (below).
+
+1. Repo **Settings → General → Danger Zone → Change visibility → Public**.
+2. **Settings → Pages → Build and deployment → Source: Deploy from a branch**, Branch: `main`, folder `/ (root)`, then **Save**.
+3. After a minute it's live at `https://<your-username>.github.io/koine-practice/`.
+
+The `.nojekyll` file tells Pages to serve the files as they are. Every push to `main` redeploys. Bump `VERSION` in `sw.js` when you push changes.
+
 ## Deploy to Render (free)
 
 1. Push this folder to a GitHub repo.
