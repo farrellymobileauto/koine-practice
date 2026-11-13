@@ -400,3 +400,14 @@ export function parseStats(days = 30) {
   }
   return Object.values(out).sort((a, b) => b.n - a.n);
 }
+
+/** Link custom words to the NT lexicon when their Greek matches (e.g. imported as "λόγος -ου ὁ"). Keeps ids and progress. */
+export function relinkCustomWords() {
+  let n = 0;
+  for (const w of db.all("words")) {
+    if (!w.id.startsWith("U:") || w.lemma) continue;
+    const l = findLemma(w.greek);
+    if (l) { db.put("words", { ...w, lemma: l.id }, { silent: true }); n++; }
+  }
+  return n;
+}

@@ -62,20 +62,29 @@ export function greekInput(input, enabled = true) {
 
 const ARTICLES = new Set(["ο", "η", "το", "οι", "αι", "τα"]);
 
+/**
+ * The bare headword of a dictionary entry, normalized: "λόγος, -ου, ὁ", "λόγος -ου ὁ", "ὁ λόγος" -> "λογοσ".
+ * Drops genitive endings ("-ου") and articles, but keeps a word that is itself an article or ἤ.
+ */
+export function headword(entry) {
+  const seg = (entry || "").split(",")[0];
+  const words = seg.split(/\s+/).filter((w) => w && !/^[-–—‐]/.test(w));
+  const norm = words.map((w) => normalize(w)).filter(Boolean);
+  const kept = norm.filter((w) => !ARTICLES.has(w));
+  return (kept.length ? kept : norm.slice(0, 1)).join(" ");
+}
+
 /** All acceptable answers for a Greek headword like "λόγος, -ου, ὁ" or "ὁ λόγος" or "ἀγαπάω / ἀγαπῶ". */
 export function headwordVariants(greek) {
   const first = (greek || "").split(",")[0];
-  return first
-    .split(/[\/;]| or /)
-    .map((v) => normalize(v).split(" ").filter((w) => !ARTICLES.has(w)).join(" "))
-    .filter(Boolean);
+  return first.split(/[\/;]| or /).map((v) => headword(v)).filter(Boolean);
 }
 
+/** Does a typed answer match the entry? Accents/breathings optional; the article and genitive may be included or left off. */
 export function greekMatches(typed, greek) {
   if (!hasGreek(typed)) typed = transliterate(typed || "");
-  const t = normalize(typed).split(" ").filter((w) => !ARTICLES.has(w)).join(" ");
-  if (!t) return false;
-  return headwordVariants(greek).includes(t);
+  const variants = headwordVariants(greek);
+  return (typed || "").split(/[\/;]/).some((part) => { const t = headword(part); return !!t && variants.includes(t); });
 }
 
 // ---------- Morphology (Robinson codes as used by STEPBible TAGNT) ----------

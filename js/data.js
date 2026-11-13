@@ -1,5 +1,5 @@
 // Static Greek data built by tools/build_data.py from STEPBible (CC BY 4.0).
-import { normalize } from "./greek.js";
+import { normalize, headword } from "./greek.js";
 
 export let LEX = [];            // [{id,g,e,p,f,h,x,pn}] sorted by frequency (index = rank)
 export const LEX_BY_ID = new Map();
@@ -23,8 +23,7 @@ export async function loadLexicon() {
 
 /** Find the most frequent lexicon entry whose lemma matches (accent-insensitive). */
 export function findLemma(greek) {
-  const head = normalize((greek || "").split(",")[0]).split(" ").filter((w) => !["ο", "η", "το"].includes(w)).join(" ");
-  const hits = BY_NORM.get(head);
+  const hits = BY_NORM.get(headword(greek));
   return hits ? LEX[hits[0]] : null;
 }
 
