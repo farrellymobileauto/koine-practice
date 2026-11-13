@@ -2,7 +2,7 @@ import { h, add, clear, icon, toast, modal } from "../ui.js";
 import { tableEl } from "./paradigms.js";
 import * as S from "../store.js";
 import { MOUNCE, prettyRef, dictForm } from "../data.js";
-import { greekInput, normalize } from "../greek.js";
+import { greekInput, normalize, greekEqual } from "../greek.js";
 import { gk } from "../gloss.js";
 import * as M from "../morph.js";
 import { paradigm } from "../paradigms.js";
@@ -344,7 +344,7 @@ function runSession(el, sess) {
     setTimeout(() => inp.focus(), 30);
     function check() {
       if (!inp.value.trim()) return inp.focus();
-      ok = answers.some((a) => normalize(a) === normalize(inp.value));
+      ok = answers.some((a) => greekEqual(inp.value, a));
       done = true; inp.disabled = true;
       S.bumpActivity({ reviews: 1, correct: ok ? 1 : 0, parse: 1 });
       S.recordParse(M.categoryLabel(target), ok);
@@ -392,7 +392,7 @@ function headwordOk(typed, it) {
   const t = normalize(typed).split(" ").filter((w) => !["ο", "η", "το"].includes(w)).join(" ");
   if (!t) return false;
   const opts = [it.lemma, it.lex?.g].filter(Boolean).map((g) => normalize(g.split(",")[0]));
-  return opts.includes(t);
+  return opts.some((o) => greekEqual(t, o));
 }
 
 function logParseMistake(it, p, answerText, mode, expectedOverride) {

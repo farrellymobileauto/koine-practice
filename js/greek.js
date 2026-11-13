@@ -27,6 +27,7 @@ export const TRANSLIT = {
   n: "ν", c: "ξ", o: "ο", p: "π", r: "ρ", s: "σ", t: "τ", u: "υ", f: "φ", x: "χ", y: "ψ", w: "ω",
 };
 
+const GK = "Ͱ-Ͽἀ-῿";
 export function transliterate(text) {
   let out = "";
   for (const ch of text) {
@@ -34,7 +35,12 @@ export function transliterate(text) {
     const g = TRANSLIT[lower];
     out += g ? (ch === lower ? g : g.toUpperCase()) : ch;
   }
-  return fixSigma(out);
+  out = fixSigma(out)
+    // "ng", "nk", "nx", "nch" are spelled γγ, γκ, γξ, γχ (εὐαγγέλιον)
+    .replace(/ν(?=[γκξχ])/g, "γ").replace(/Ν(?=[γκξχ])/g, "Γ")
+    // a word-initial h before a vowel is the rough breathing: "hagios" -> ἁγιος
+    .replace(new RegExp(`(^|[^${GK}])[ηΗ]([αεηιουωΑΕΗΙΟΥΩ])`, "g"), (m, pre, v) => pre + v + "̔");
+  return out.normalize("NFC");
 }
 
 export function fixSigma(s) {
@@ -51,10 +57,12 @@ export function greekInput(input, enabled = true) {
   if (!enabled) return input;
   input.addEventListener("input", () => {
     const pos = input.selectionStart;
-    const v = transliterate(input.value);
-    if (v !== input.value) {
+    const before = input.value;
+    const v = transliterate(before);
+    if (v !== before) {
       input.value = v;
-      try { input.setSelectionRange(pos, pos); } catch {}
+      const p = Math.max(0, pos + (v.length - before.length));
+      try { input.setSelectionRange(p, p); } catch {}
     }
   });
   return input;
@@ -84,7 +92,58 @@ export function headwordVariants(greek) {
 export function greekMatches(typed, greek) {
   if (!hasGreek(typed)) typed = transliterate(typed || "");
   const variants = headwordVariants(greek);
-  return (typed || "").split(/[\/;]/).some((part) => { const t = headword(part); return !!t && variants.includes(t); });
+  return (typed || "").split(/[\/;]/).some((part) => { const t = headword(part); return !!t && variants.some((v) => sameNorm(t, v)); });
+}
+
+// ---------- tolerant comparison of typed answers ----------
+// People type Greek from Latin keys in different ways: this app's chart (q = θ, x = χ, h = η …) or the usual
+// transliteration (th, ch, ph, ps, "ng" for γγ, h for the rough breathing). Both are accepted.
+
+const TO_LATIN = Object.fromEntries(Object.entries(TRANSLIT).map(([l, g]) => [g, l]));
+const LATIN_OPTIONS = {
+  α: ["a"], β: ["b", "v"], γ: ["g"], δ: ["d"], ε: ["e"], ζ: ["z"], η: ["h"], θ: ["q", "th"], ι: ["i", "j"], κ: ["k"],
+  λ: ["l"], μ: ["m"], ν: ["n"], ξ: ["c", "x", "ks"], ο: ["o"], π: ["p"], ρ: ["r", "rh"], σ: ["s"], τ: ["t"], υ: ["u", "y"],
+  φ: ["f", "ph"], χ: ["x", "ch", "kh"], ψ: ["y", "ps"], ω: ["w"],
+};
+
+/** Could these Latin keystrokes spell this (normalized) Greek word? */
+function latinSpells(latin, greek) {
+  const memo = new Map();
+  const go = (i, j) => {
+    const k = i * 100 + j;
+    if (memo.has(k)) return memo.get(k);
+    let ok = false;
+    if (j === greek.length) ok = i === latin.length;
+    else {
+      const g = greek[j];
+      const opts = [...(LATIN_OPTIONS[g] || [g])];
+      if (g === "γ" && "γκξχ".includes(greek[j + 1] || "")) opts.push("n");
+      ok = opts.some((o) => latin.startsWith(o, i) && go(i + o.length, j + 1));
+      // optional "h" for a rough breathing on the first letter (ἁγιος = hagios, ῥημα = rhema)
+      if (!ok && j === 0 && i === 0 && latin[0] === "h" && "αεηιουωρ".includes(g)) ok = go(1, 0);
+    }
+    memo.set(k, ok);
+    return ok;
+  };
+  return go(0, 0);
+}
+
+function sameWord(t, a) {
+  if (t === a) return true;
+  const latin = [...t].map((c) => TO_LATIN[c] || "").join("");
+  return !!latin && latinSpells(latin, a);
+}
+/** Compare two normalized strings word by word, tolerating different ways of typing. */
+function sameNorm(t, a) {
+  const tw = t.split(" "), aw = a.split(" ");
+  return tw.length === aw.length && tw.every((w, i) => sameWord(w, aw[i]));
+}
+
+/** Is a typed Greek form the same as the answer? (accents optional, either typing style) */
+export function greekEqual(typed, answer) {
+  if (!hasGreek(typed)) typed = transliterate(typed || "");
+  const t = normalize(typed), a = normalize(answer);
+  return !!t && sameNorm(t, a);
 }
 
 // ---------- Morphology (Robinson codes as used by STEPBible TAGNT) ----------

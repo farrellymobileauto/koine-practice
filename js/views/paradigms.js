@@ -2,7 +2,7 @@ import { h, add, clear, icon, toast } from "../ui.js";
 import * as S from "../store.js";
 import { PARADIGMS, GROUPS, rowsOf, cellsOf, paradigm } from "../paradigms.js";
 import { findLemma, dictForm } from "../data.js";
-import { greekInput, normalize } from "../greek.js";
+import { greekInput, normalize, greekEqual } from "../greek.js";
 import { gk } from "../gloss.js";
 import { go } from "../app.js";
 
@@ -74,7 +74,7 @@ export function paradigmView(el, id) {
       }
       const td = h("td.pcell", inp);
       if (checked) {
-        const ok = cell.variants.some((v) => normalize(v) === normalize(inp.value));
+        const ok = cell.variants.some((v) => greekEqual(inp.value, v));
         td.classList.add(ok ? "ok" : "miss");
         if (!ok) add(td, h("div.greek.small", cell.display));
       }
@@ -93,7 +93,7 @@ export function paradigmView(el, id) {
     for (const idx of hidden) {
       const cell = cells[idx];
       const val = inputs.get(idx)?.value || "";
-      const ok = cell.variants.some((v) => normalize(v) === normalize(val));
+      const ok = cell.variants.some((v) => greekEqual(val, v));
       if (ok) right++;
       else S.logMistake({ kind: "paradigm", category: "Paradigm · " + t.title, prompt: `${t.cols[cell.c].label} · ${rows[cell.r].label}`, expected: cell.display, answer: val, lemma: (findLemma(cell.lemma) || lex)?.id || null, drill: { paradigm: t.id } });
     }
