@@ -91,7 +91,7 @@ export function headwordVariants(greek) {
 /** Does a typed answer match the entry? Accents/breathings optional; the article and genitive may be included or left off. */
 export function greekMatches(typed, greek) {
   if (!hasGreek(typed)) typed = transliterate(typed || "");
-  const variants = headwordVariants(greek);
+  const variants = [...new Set([...headwordVariants(greek), ...headwordVariants((greek || "").normalize("NFD").replace(/ͅ/g, "ι"))])];
   return (typed || "").split(/[\/;]/).some((part) => { const t = headword(part); return !!t && variants.some((v) => sameNorm(t, v)); });
 }
 
@@ -142,8 +142,15 @@ function sameNorm(t, a) {
 /** Is a typed Greek form the same as the answer? (accents optional, either typing style) */
 export function greekEqual(typed, answer) {
   if (!hasGreek(typed)) typed = transliterate(typed || "");
-  const t = normalize(typed), a = normalize(answer);
-  return !!t && sameNorm(t, a);
+  const t = normalize(typed);
+  return !!t && answerForms(answer).some((a) => sameNorm(t, a));
+}
+
+/** The normalized answer, plus a version with any iota subscript written as a full ι (λόγῳ = λογω or λογωι). */
+function answerForms(answer) {
+  const a = normalize(answer);
+  const adscript = normalize((answer || "").normalize("NFD").replace(/ͅ/g, "ι"));
+  return adscript !== a ? [a, adscript] : [a];
 }
 
 // ---------- Morphology (Robinson codes as used by STEPBible TAGNT) ----------

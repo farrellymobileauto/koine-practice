@@ -82,7 +82,7 @@ export function paradigmView(el, id) {
     })));
     add(stage, h("div.table-wrap.ptable", { style: { maxHeight: "none" } }, h("table", h("thead", head), h("tbody", body))));
     if (mode !== "view") add(stage, h("div.row.end", { style: { marginTop: "10px" } },
-      checked ? null : h("span.tiny.muted", "Accents optional · Enter moves to the next box"),
+      checked ? null : h("span.tiny.muted", "Accents, breathings and iota subscripts are optional · Enter moves to the next box"),
       checked ? h("button.btn", { onclick: () => start(mode) }, "Try again") : h("button.btn.primary", { onclick: check }, "Check")));
   }
 

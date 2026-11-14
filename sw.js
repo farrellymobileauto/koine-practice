@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever you deploy changes so phones pick them up.
-const VERSION = "v13";
+const VERSION = "v14";
 const CACHE = "koine-" + VERSION;
 const SHELL = [
   "./", "index.html", "css/app.css", "manifest.webmanifest", "icon.svg", "icon-192.png",
