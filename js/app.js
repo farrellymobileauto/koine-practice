@@ -126,13 +126,22 @@ async function boot() {
   initGloss();
   window.addEventListener("hashchange", () => render());
   // Re-render the current view when data changes (views that manage their own state opt out with data-live="1").
+  // changes made inside a pop-up (e.g. "Add words") show up as soon as it closes
+  let staleWhileModal = false;
+  window.addEventListener("koine:modal-closed", () => {
+    if (!staleWhileModal || document.querySelector(".modal-back")) return;
+    staleWhileModal = false;
+    const view = document.getElementById("view");
+    if (view.dataset.live === "1") return;
+    const y = window.scrollY; render(true); window.scrollTo(0, y);
+  });
   onChange(() => {
     applyTheme();
     const view = document.getElementById("view");
     if (view.dataset.live === "1") return;
     const a = document.activeElement;
     if (a && view.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return; // don't interrupt typing
-    if (document.querySelector(".modal-back")) return;
+    if (document.querySelector(".modal-back")) { staleWhileModal = true; return; }
     const y = window.scrollY;
     render(true);
     window.scrollTo(0, y);

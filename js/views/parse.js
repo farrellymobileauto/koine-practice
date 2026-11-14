@@ -79,7 +79,7 @@ export function parseHome(el) {
     if (params.get("go") || params.get("quick")) {
       if (params.get("quick")) p.length = 10;
       const items = M.sample(poolFor(p), p.length);
-      if (items.length) return runSession(el, { items, task: p.task, mode: p.mode, title: "Parsing" });
+      if (items.length) return runSession(el, { items, task: p.task, mode: p.mode, title: "Parsing", maxCh: p.maxCh });
     }
     setup(body, p);
   });
@@ -135,7 +135,7 @@ function setup(body, p) {
 
   const startBtn = h("button.btn.primary.big.block", { onclick: () => {
     const items = M.sample(poolFor(p), p.length);
-    runSession(body.parentElement, { items, task: p.task, mode: p.mode, title: "Parsing" });
+    runSession(body.parentElement, { items, task: p.task, mode: p.mode, title: "Parsing", maxCh: p.maxCh });
   } }, icon("play"), "Start");
 
   function redraw() { setup(body, p); }
@@ -223,7 +223,9 @@ function runSession(el, sess) {
     clear(stage);
     const ans = {};
     let done = false, logged = null;
-    let valid = it.parses.filter((p) => (sess.mode === "verbs" ? p.pos === "verb" : p.pos !== "verb"));
+    // readings of this form taught by the chosen chapter (λύσω isn't also an aorist subjunctive before ch. 31)
+    let valid = it.parses.filter((p) => (sess.mode === "verbs" ? p.pos === "verb" : p.pos !== "verb") && M.chapterFor(p, it.lemma) <= (sess.maxCh || 36));
+    if (!valid.length) valid = it.parses.filter((p) => (sess.mode === "verbs" ? p.pos === "verb" : p.pos !== "verb"));
     // With the article shown, only the parsings that match it are valid (τῆς ὥρας = gen. sg., τὰς ὥρας = acc. pl.).
     let art = null;
     if (withArticle) {

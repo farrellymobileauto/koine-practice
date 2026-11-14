@@ -49,7 +49,7 @@ export function toast(msg, kind = "") {
 /** Modal dialog. Returns { el, close }. content can be a node or (close) => node. */
 export function modal(title, content, { wide = false } = {}) {
   const back = h("div.modal-back");
-  const close = () => { back.remove(); document.removeEventListener("keydown", onKey); };
+  const close = () => { back.remove(); document.removeEventListener("keydown", onKey); window.dispatchEvent(new Event("koine:modal-closed")); };
   const onKey = (e) => { if (e.key === "Escape") close(); };
   const body = typeof content === "function" ? content(close) : content;
   const box = h("div.modal", { class: wide ? "wide" : "", role: "dialog", "aria-modal": "true", "aria-label": title },

@@ -261,13 +261,15 @@ export function realItems({ minLemmaFreq = 10 } = {}) {
 /** Filter items by mode ("nouns"|"verbs"), chapter limit, and category selections. */
 export function filterItems(items, { mode, maxCh = 36, nounCats = null, tenses = null, moods = null }) {
   return items.filter((it) => {
-    const ps = it.parses.filter((p) => (mode === "verbs" ? p.pos === "verb" : p.pos !== "verb"));
+    // only the readings taught by this chapter count
+    const ps = it.parses.filter((p) => (mode === "verbs" ? p.pos === "verb" : p.pos !== "verb") && chapterFor(p, it.lemma) <= maxCh);
     if (!ps.length) return false;
-    return ps.some((p) => {
-      if (chapterFor(p, it.lemma) > maxCh) return false;
-      if (mode === "verbs") return (!tenses || tenses.includes(p.tense)) && (!moods || moods.includes(p.mood));
-      return !nounCats || nounCats.includes(nounCat(p));
-    });
+    if (mode === "verbs") {
+      // every reading must fit the selected tenses/moods, so e.g. λύσω (future or aorist subjunctive)
+      // doesn't appear when aorist is switched off
+      return ps.every((p) => (!tenses || tenses.includes(p.tense)) && (!moods || moods.includes(p.mood)));
+    }
+    return ps.some((p) => !nounCats || nounCats.includes(nounCat(p)));
   });
 }
 
