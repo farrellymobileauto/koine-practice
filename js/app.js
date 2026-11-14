@@ -121,7 +121,7 @@ async function boot() {
     return;
   }
   S.deviceId();
-  try { S.relinkCustomWords(); } catch (e) { console.warn(e); }
+  try { S.relinkCustomWords(); S.migrateMergedWords(); } catch (e) { console.warn(e); }
   applyTheme();
   initGloss();
   window.addEventListener("hashchange", () => render());

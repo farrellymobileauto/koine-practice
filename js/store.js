@@ -1,6 +1,6 @@
 // App data model on top of db.js.
 import * as db from "./db.js";
-import { LEX, LEX_BY_ID, TOTAL_TOKENS, dictForm, findLemma } from "./data.js";
+import { LEX, LEX_BY_ID, ALIAS, TOTAL_TOKENS, dictForm, findLemma } from "./data.js";
 import { fsrs, generatorParameters, createEmptyCard, Rating, State } from "../vendor/ts-fsrs.mjs";
 import { prepWord, prepCards } from "./prepositions.js";
 
@@ -408,6 +408,39 @@ export function relinkCustomWords() {
     if (!w.id.startsWith("U:") || w.lemma) continue;
     const l = findLemma(w.greek);
     if (l) { db.put("words", { ...w, lemma: l.id }, { silent: true }); n++; }
+  }
+  return n;
+}
+
+/**
+ * Some NT words used to have several lexicon entries (e.g. three for ποιέω). They're merged now;
+ * move lists, cards, edits and mistakes from the old ids to the merged one. Runs at startup; does nothing once done.
+ */
+export function migrateMergedWords() {
+  if (!ALIAS.size) return 0;
+  const to = (wid) => (wid && wid.startsWith("L:") && ALIAS.has(wid.slice(2)) ? "L:" + ALIAS.get(wid.slice(2)) : wid);
+  let n = 0;
+  for (const l of db.all("lists")) {
+    const ids = [...new Set(l.wordIds.map(to))];
+    if (ids.length !== l.wordIds.length || ids.some((x, i) => x !== l.wordIds[i])) { db.put("lists", { ...l, wordIds: ids }, { silent: true }); n++; }
+  }
+  for (const c of db.all("cards")) {
+    const nw = to(c.wordId);
+    if (nw === c.wordId) continue;
+    const nid = `${nw}|${c.dir}`;
+    const cur = db.get("cards", nid);
+    // keep whichever card has more practice behind it
+    if (!cur || (c.fsrs?.reps || 0) > (cur.fsrs?.reps || 0)) db.put("cards", { ...c, id: nid, wordId: nw }, { silent: true });
+    db.remove("cards", c.id);
+    n++;
+  }
+  for (const w of db.all("words")) {
+    const nw = to(w.id);
+    if (nw !== w.id) { if (!db.get("words", nw)) db.put("words", { ...w, id: nw }, { silent: true }); db.remove("words", w.id); n++; }
+  }
+  for (const m of db.all("mistakes")) {
+    const nw = to(m.wordId);
+    if (nw !== m.wordId) { db.put("mistakes", { ...m, wordId: nw, lemma: nw.slice(2) }, { silent: true }); n++; }
   }
   return n;
 }

@@ -3,6 +3,7 @@ import { normalize, headword } from "./greek.js";
 
 export let LEX = [];            // [{id,g,e,p,f,h,x,pn}] sorted by frequency (index = rank)
 export const LEX_BY_ID = new Map();
+export const ALIAS = new Map();      // old duplicate id -> merged id
 const BY_NORM = new Map();      // normalized lemma -> [lexicon index]
 export let TOTAL_TOKENS = 0;
 let ntPromise = null;
@@ -14,6 +15,7 @@ export async function loadLexicon() {
   LEX.forEach((l, i) => {
     l.i = i;
     LEX_BY_ID.set(l.id, l);
+    for (const a of l.a || []) { LEX_BY_ID.set(a, l); ALIAS.set(a, l.id); } // merged duplicate entries
     const n = normalize(l.g);
     if (!BY_NORM.has(n)) BY_NORM.set(n, []);
     BY_NORM.get(n).push(i);

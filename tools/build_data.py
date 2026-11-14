@@ -168,6 +168,53 @@ def main(src, out):
                 lemma_info[s] = (lem, lg)
             if re.match(r"^N-GS[MFN]", mo):
                 gen_forms[s][acute(split_punct(w)[0])] += 1
+
+    # ---- one entry per word
+    # STEPBible splits some lemmas by sense (G4160G, G4160H, ... all ποιέω), which would show up as
+    # duplicate vocab cards with split frequencies. Merge entries with the same lemma and part of speech
+    # (names excepted). A few placeholder lemmas get the forms students learn instead:
+    # εἴδω -> οἶδα ("to know") and εἶδον ("to see"); ἔπω -> εἶπον ("to say").
+    RENAME = {
+        "G6063": ("οἶδα", "to know"), "G2467": ("οἶδα", "to know"),
+        "G1492G": ("εἶδον", "to see"), "G1492H": ("εἶδον", "to see"), "G1492I": ("εἶδον", "to see"),
+        "G2036": ("εἶπον", "to say"), "G2046": ("εἶπον", "to say"), "G4483": ("εἶπον", "to say"),
+    }
+    for s, (lem, lg) in RENAME.items():
+        if s in lemma_info:
+            lemma_info[s] = (lem, lg)
+    groups = defaultdict(list)
+    for s in freq:
+        is_pn = proper[s] > freq[s] / 2
+        groups[(lemma_info[s][0], pos_of(morph_by_lemma[s].most_common(1)[0][0]), is_pn)].append(s)
+    canon, aliases = {}, defaultdict(list)
+    for (lem, pos, is_pn), ss in groups.items():
+        if is_pn or len(ss) == 1:
+            for s in ss:
+                canon[s] = s
+            continue
+        c = max(ss, key=lambda s: (freq[s], s))
+        glosses_seen = []
+        for s in sorted(ss, key=lambda s: -freq[s]):
+            canon[s] = c
+            gl = short_gloss(lemma_info[s][1])
+            if gl and gl not in glosses_seen:
+                glosses_seen.append(gl)
+            if s != c:
+                aliases[c].append(s)
+        lemma_info[c] = (lem, "/".join(glosses_seen[:3]))
+    verses = [(key, [(w, canon[s], mo, g, lem, lg) for (w, s, mo, g, lem, lg) in toks]) for key, toks in verses]
+    # recount with merged entries
+    freq, proper, morph_by_lemma, gen_forms = Counter(), Counter(), defaultdict(Counter), defaultdict(Counter)
+    for _, toks in verses:
+        for (w, s, mo, g, lem, lg) in toks:
+            freq[s] += 1
+            morph_by_lemma[s][mo] += 1
+            if re.search(r"-(P|L|PG|LG|T)$", mo) and not mo.endswith("-T"):
+                proper[s] += 1
+            if re.match(r"^N-GS[MFN]", mo):
+                gen_forms[s][acute(split_punct(w)[0])] += 1
+    print(f"merged {sum(len(a) for a in aliases.values())} duplicate entries into {len(aliases)} words")
+
     lex_ids = sorted(freq, key=lambda s: (-freq[s], s))
     lex_index = {s: i for i, s in enumerate(lex_ids)}
     lexicon = []
@@ -217,6 +264,7 @@ def main(src, out):
             "x": gender,
             "pn": 1 if proper[s] > freq[s] / 2 else 0,
             **({"d": decl} if decl else {}),
+            **({"a": aliases[s]} if aliases.get(s) else {}),  # merged ids (kept so saved progress still resolves)
         })
 
     # ---- text with string tables
