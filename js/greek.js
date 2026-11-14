@@ -25,6 +25,7 @@ export function acute(s) {
 export const TRANSLIT = {
   a: "α", b: "β", g: "γ", d: "δ", e: "ε", z: "ζ", h: "η", q: "θ", i: "ι", k: "κ", l: "λ", m: "μ",
   n: "ν", c: "ξ", o: "ο", p: "π", r: "ρ", s: "σ", t: "τ", u: "υ", f: "φ", x: "χ", y: "ψ", w: "ω",
+  v: "ν", // v looks like ν
 };
 
 const GK = "Ͱ-Ͽἀ-῿";
@@ -55,7 +56,7 @@ export function greekInput(input, enabled = true) {
   input.setAttribute("autocorrect", "off");
   input.setAttribute("spellcheck", "false");
   if (!enabled) return input;
-  input.addEventListener("input", () => {
+  const convert = () => {
     const pos = input.selectionStart;
     const before = input.value;
     const v = transliterate(before);
@@ -64,7 +65,15 @@ export function greekInput(input, enabled = true) {
       const p = Math.max(0, pos + (v.length - before.length));
       try { input.setSelectionRange(p, p); } catch {}
     }
-  });
+  };
+  // Phone keyboards "compose" a word before committing it; changing the text mid-composition garbles it.
+  let composing = false;
+  input.addEventListener("compositionstart", () => { composing = true; });
+  input.addEventListener("compositionend", () => { composing = false; convert(); });
+  input.addEventListener("input", (e) => { if (composing || e.isComposing) return; convert(); });
+  // make sure the value is converted before anything reads it (Check / Enter / leaving the box)
+  input.addEventListener("blur", convert);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") { composing = false; convert(); } }, true);
   return input;
 }
 
@@ -99,9 +108,9 @@ export function greekMatches(typed, greek) {
 // People type Greek from Latin keys in different ways: this app's chart (q = θ, x = χ, h = η …) or the usual
 // transliteration (th, ch, ph, ps, "ng" for γγ, h for the rough breathing). Both are accepted.
 
-const TO_LATIN = Object.fromEntries(Object.entries(TRANSLIT).map(([l, g]) => [g, l]));
+const TO_LATIN = Object.fromEntries(Object.entries(TRANSLIT).filter(([l]) => l !== "v").map(([l, g]) => [g, l]));
 const LATIN_OPTIONS = {
-  α: ["a"], β: ["b", "v"], γ: ["g"], δ: ["d"], ε: ["e"], ζ: ["z"], η: ["h"], θ: ["q", "th"], ι: ["i", "j"], κ: ["k"],
+  α: ["a"], β: ["b"], γ: ["g"], δ: ["d"], ε: ["e"], ζ: ["z"], η: ["h"], θ: ["q", "th"], ι: ["i", "j"], κ: ["k"],
   λ: ["l"], μ: ["m"], ν: ["n"], ξ: ["c", "x", "ks"], ο: ["o"], π: ["p"], ρ: ["r", "rh"], σ: ["s"], τ: ["t"], υ: ["u", "y"],
   φ: ["f", "ph"], χ: ["x", "ch", "kh"], ψ: ["y", "ps"], ω: ["w"],
 };

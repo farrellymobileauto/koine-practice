@@ -63,7 +63,7 @@ export function profileView(el) {
         h("h2", "Typing Greek"),
         h("label.check", translit, h("span", h("b", "Turn Latin keys into Greek letters"), h("br"), h("span.small.muted", "Turn this off if you use a Greek keyboard on your phone or computer. Accents and breathing marks are never required in answers."))),
         h("div.keychart", Object.entries(TRANSLIT).map(([k, g]) => h("span", k, " → ", h("b", g)))),
-        h("p.tiny.muted", "Final sigma (ς) is automatic. h = η, q = θ, c = ξ, x = χ, y = ψ, w = ω, f = φ, u = υ. An h before a word-initial vowel is the rough breathing (hagios → ἁγιος), and ng/nk/nx become γγ/γκ/γξ. Answers are also accepted in standard transliteration (th, ph, ch, ps)."),
+        h("p.tiny.muted", "Final sigma (ς) is automatic. h = η, q = θ, c = ξ, x = χ, y = ψ, w = ω, f = φ, u = υ, v = ν. An h before a word-initial vowel is the rough breathing (hagios → ἁγιος), and ng/nk/nx become γγ/γκ/γξ. Answers are also accepted in standard transliteration (th, ph, ch, ps)."),
         tryIt),
 
       h("div.card.stack",
@@ -76,7 +76,7 @@ export function profileView(el) {
 
       h("div.card.small.muted",
         h("h2", "Sources & credits"),
-        h("p", "App version: ", h("code", "v14")),
+        h("p", "App version: ", h("code", "v15")),
         h("p", "Greek NT text: Tyndale House Greek New Testament (THGNT) readings, grammar tags and glosses from STEPBible's TAGNT, by Tyndale House Cambridge & STEPBible.org, CC BY 4.0 (", h("a", { href: "https://github.com/STEPBible/STEPBible-Data", target: "_blank", rel: "noopener" }, "STEPBible-Data"), "). English glosses are based on the Berean Study Bible. Dictionary forms come from the TBESG lexicon (Abbott-Smith). The data was reformatted for this app: only THGNT words are kept and glosses are shortened."),
         h("p", "Septuagint: Brenton's Greek text and English translation (1851, public domain, via eBible.org). Lemmas and parsing are computer-assigned by looking up each form in the THGNT's tags and in the QuantForge Swete LXX analyses (CC BY-SA 4.0), so they can be wrong for ambiguous forms. NT English: Berean Standard Bible (public domain)."),
         h("p", "Spaced repetition: ts-fsrs (MIT)."))));
