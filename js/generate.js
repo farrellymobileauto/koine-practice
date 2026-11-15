@@ -192,6 +192,29 @@ export function generateVerb(lex, exclude = null) {
     if (!stems[plain] && stems[aug] && stems[aug][0] === "ε" && stems[aug][1] === lemFirst && !"αεηιουω".includes(lemFirst)) { stems[plain] = stems[aug].slice(1); kinds[plain] = kinds[aug]; }
     if (!stems[aug] && stems[plain] && !"αεηιουω".includes(stems[plain][0]) && stems[plain][0] === lemFirst) { stems[aug] = "ε" + stems[plain]; kinds[aug] = kinds[plain]; }
   }
+  // imperfect stem = present stem + this verb's own augment, read off its aorist (ᾐτησα/αἰτησ -> ᾐτουν,
+  // ηὐφράνθη/εὐφρανθ -> ηὐφραινόμην, κατῴκησα/κατοικησ -> κατῴκει). The NT's unaugmented imperfects
+  // (εὐφραίνοντο) are kept as accepted alternates.
+  let impfAlt = null;
+  const augment = (() => {
+    for (const [a, p] of [["aorI", "aor"], ["apI", "ap"]]) {
+      const A = stems[a], P = stems[p];
+      if (!A || !P || A === P) continue;
+      let k = 0;
+      while (k < Math.min(A.length, P.length) && A[A.length - 1 - k] === P[P.length - 1 - k]) k++;
+      return { from: P.slice(0, P.length - k), to: A.slice(0, A.length - k) };
+    }
+    return null;
+  })();
+  // known irregular augments the aorist doesn't reveal
+  const IRREGULAR_IMPF = { ορααω: null, οραω: "εωρα" }; // ὁράω -> ἑώρων (double augment)
+  if (nl in IRREGULAR_IMPF && IRREGULAR_IMPF[nl]) stems.impf = IRREGULAR_IMPF[nl];
+  else if (stems.pres && augment && stems.pres.startsWith(augment.from)
+      && !(augment.from === "" && /^[αεηιουω]/.test(stems.pres))) { // ἔχω -> εἶχον can't be read off ἔσχον
+    const aug = augment.to + stems.pres.slice(augment.from.length);
+    if (!stems.impf) stems.impf = aug;
+    else if (stems.impf === stems.pres && aug !== stems.impf) { impfAlt = stems.impf; stems.impf = aug; }
+  }
   // liquid futures (μενῶ, κρινῶ) contract like -έω verbs
   const cvFor = { pres: cv, impf: cv };
   if (stems.fut && !/[σξψ]$/.test(stems.fut)) { stems.fut += "ε"; cvFor.fut = "ε"; }
@@ -221,14 +244,20 @@ export function generateVerb(lex, exclude = null) {
       const same = attested.filter((a) => a.p.tense === "A" && a.p.voice === block.p.voice);
       if (same.length && same.some((a) => !!a.p.second !== (block.kind === 2))) return false;
     }
-    // only voices the verb really uses in this tense (no active forms for deponents)
-    return attestedVoice((p) => p.tense === block.p.tense && (block.p.voice === "A" ? p.voice === "A" : block.p.voice === "P" ? p.voice === "P" : p.voice !== "A"));
+    // only voices the verb really uses (no active forms for deponents); present and imperfect share a stem,
+    // so a voice seen in either counts for both (αἰτοῦμεν -> ᾔτουν)
+    const tenses = block.p.tense === "P" || block.p.tense === "I" ? ["P", "I"] : [block.p.tense];
+    return attestedVoice((p) => tenses.includes(p.tense) && (block.p.voice === "A" ? p.voice === "A" : block.p.voice === "P" ? p.voice === "P" : p.voice !== "A"));
   };
   // pass 1: check every block that has NT forms; a stem is confirmed when one of its blocks reproduces them
   const built = new Map(), failed = new Set(), confirmed = new Set();
   for (const block of BLOCKS) {
     if (!usable(block)) continue;
     const cells = buildBlock(block, stems[block.stem], cvFor[block.stem] || null);
+    if (block.stem === "impf" && impfAlt) {
+      const alt = buildBlock(block, impfAlt, cvFor.impf || null);
+      cells.forEach((c, i) => { c.forms.push(...alt[i].forms); c.raw.push(...alt[i].raw); });
+    }
     built.set(block, cells);
     const mine = attested.filter((a) => blockMatches(block, a.p));
     if (!mine.length) continue;
@@ -270,14 +299,17 @@ function lemmaSubscripts(form, lemma) {
 
 function withBreathing(form, lemma) {
   // stems keep iota subscripts as "j" (see formKey); turn them back into ᾳ ῃ ῳ
-  form = fixSigma(form.replace(/αj/g, "ᾳ").replace(/ηj/g, "ῃ").replace(/ωj/g, "ῳ").replace(/j/g, ""));
-  if (!/^[αεηιουωρ]/.test(form)) return form;
-  const rough = lemma.normalize("NFD").slice(0, 3).includes("̔");
-  const mark = rough ? "̔" : "̓";
-  if (form[0] === "ρ") return rough ? "ῥ" + form.slice(1) : form;
-  const diph = /^(αι|ει|οι|υι|αυ|ευ|ου|ηυ)/.test(form);
-  const i = diph ? 1 : 0;
-  return (form.slice(0, i + 1) + mark + form.slice(i + 1)).normalize("NFC");
+  form = fixSigma(form.replace(/αj/g, "ᾳ").replace(/ηj/g, "ῃ").replace(/ωj/g, "ῳ").replace(/j/g, "")).normalize("NFD");
+  form = form.replace(/^([αεηιουωρ])((?:[̀-ͯ])*)/, (m, ch, marks) => ch + marks.replace(/[̓̔]/g, "")); // base letter + its marks
+  if (/^[αεηιουωρ]/.test(form)) {
+    const rough = lemma.normalize("NFD").slice(0, 3).includes("̔");
+    if (form[0] === "ρ") return (rough ? "ῥ" + form.slice(1) : form).normalize("NFC");
+    // breathing goes on the second vowel of a diphthong (αἰ, εὐ, οὐ, ηὐ)
+    const diph = /^(α|ε|ο|υ|η)ͅ?(ι|υ)/.test(form) && !/^.ͅ/.test(form);
+    const at = diph ? form.indexOf(form.match(/^.ͅ?(ι|υ)/)[1], 1) + 1 : 1 + (form[1] === "ͅ" ? 1 : 0);
+    return (form.slice(0, at) + (rough ? "̔" : "̓") + form.slice(at)).normalize("NFC");
+  }
+  return form.normalize("NFC");
 }
 
 let cache = null;
