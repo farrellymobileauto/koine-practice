@@ -8,6 +8,7 @@ import * as M from "../morph.js";
 import { paradigm } from "../paradigms.js";
 import { go, route } from "../app.js";
 import { prepItems, samplePrep, runPrepSession } from "./prepdrill.js";
+import { generatedItems, generatedStats } from "../generate.js";
 
 const LS = "koine.parsePrefs";
 // Which parts of a parsing to ask for (each can be switched off). Participles use case/number/gender from verbAsk.
@@ -43,6 +44,18 @@ export function startParseWithTable(id) {
   });
 }
 
+/** Parse every generated form of one verb (from the Lexicon). Falls back to its NT forms. */
+export function startParseVerb(lemma) {
+  M.loadForms().then(() => {
+    let items = generatedItems(lemma);
+    if (!items.length) items = M.realItems({ minLemmaFreq: 0 }).filter((it) => normalize(it.lemma) === normalize(lemma));
+    const seen = new Set();
+    items = S.shuffle(items).filter((it) => { const k = normalize(it.form); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 20);
+    pending = { items, task: "recognize", mode: "verbs", title: lemma, maxCh: 36 };
+    if (route().path === "parse") location.reload(); else go("parse");
+  });
+}
+
 /** Called from Today's weak spots: drill = { mode, tense?, mood?, cat? } */
 export function startParseDrill(drill) {
   const p = prefs();
@@ -55,10 +68,14 @@ export function startParseDrill(drill) {
 
 function poolFor(p) {
   let items = [];
-  if (p.source !== "real") items.push(...M.paradigmItems());
-  if (p.source !== "paradigm") items.push(...M.realItems());
+  if (p.source === "generated" && p.mode === "verbs") items = generatedItems();
+  else if (p.source === "generated") p.source = "both";
+  else {
+    if (p.source !== "real") items.push(...M.paradigmItems());
+    if (p.source !== "paradigm") items.push(...M.realItems());
+  }
   items = M.filterItems(items, { mode: p.mode, maxCh: p.maxCh, nounCats: p.nounCats, tenses: p.tenses, moods: p.moods });
-  if (p.task === "produce") items = items.filter((it) => it.target && (it.source === "paradigm" || (it.lex && it.lex.f >= 50)));
+  if (p.task === "produce") items = items.filter((it) => it.target && (it.source !== "real" || (it.lex && it.lex.f >= 50)));
   else {
     const ask = askFor(p, p.mode);
     if (!ask.lexical) items = items.filter((it) => it.parses.some((q) => (p.mode === "verbs") === (q.pos === "verb") && askedDims(q, ask).length));
@@ -145,7 +162,8 @@ function setup(body, p) {
       h("div.row", seg("mode", [["nouns", "Nouns & pronouns"], ["verbs", "Verbs"], ["preps", "Prepositions"]]), seg("task", [["recognize", "Recognize"], ["produce", "Produce"]])),
       h("div.small.muted", p.task === "recognize" ? "See a form and give its parsing. Any valid parsing counts." : "Get a lexical form and a parsing, then type the Greek form (accents optional)."),
       h("div.small.muted", "Forms from"),
-      seg("source", [["both", "Paradigms + real NT forms"], ["paradigm", "Paradigms only"], ["real", "Real NT forms only"]]),
+      seg("source", [["both", "Paradigms + real NT forms"], ["paradigm", "Paradigms only"], ["real", "Real NT forms only"], ...(p.mode === "verbs" ? [["generated", "All verbs, every form"]] : [])]),
+      p.mode === "verbs" && p.source === "generated" ? h("div.tiny.muted", (() => { const st = generatedStats(); return `${st.verbs} verbs used 10+ times in the NT, ${st.forms.toLocaleString()} forms built from their NT stems. Forms that also occur in the NT show their accents; the rest are shown without accents. Verbs or tenses that don't follow the regular patterns (μι verbs, root aorists, ζάω, δύναμαι…) are left out.`; })()) : null,
       h("label.field", "Grammar covered", ch, h("span.hint", "Only forms Mounce has taught by this chapter. Set your chapter in Profile.")),
       p.mode === "nouns"
         ? [h("div.small.muted", "Include"), chips("nounCats", M.NOUN_CATS),
@@ -243,7 +261,7 @@ function runSession(el, sess) {
     const formEl = h("div.verse", { style: { fontSize: "2.6rem", margin: 0 } }, art ? h("span.art", art + " ") : null, it.form);
     const card = h("div.card.stack",
       h("div", { style: { textAlign: "center", padding: "14px 0 4px" } },
-        h("div.tag.small.muted", it.source === "real" ? `${prettyRef(it.ref)} · real NT form` : "Paradigm form"), formEl),
+        h("div.tag.small.muted", it.source === "real" ? `${prettyRef(it.ref)} · real NT form` : it.source === "generated" ? (it.accents ? "Generated · also in the NT" : "Generated form · accents not shown") : "Paradigm form"), formEl),
       rowsWrap, feedback, checkBtn);
     add(stage, card);
 

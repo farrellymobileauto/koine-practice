@@ -84,8 +84,34 @@ def parse_tbesg(path):
         if m:
             head = re.sub(r"\s+", " ", m.group(1)).strip()
             head = head.lstrip(",").strip()
-        lex[key] = {"lemma": cols[3].strip(), "morph": cols[5].strip(), "gloss": short_gloss(cols[6]), "head": head}
+        lex[key] = {"lemma": cols[3].strip(), "morph": cols[5].strip(), "gloss": short_gloss(cols[6]), "head": head, "def": defn, "tr": cols[4].strip()}
     return lex
+
+
+NT_BOOK_CODES = None  # filled in main()
+
+
+def clean_def(html):
+    """Abbott-Smith entry from TBESG -> small safe HTML: <b>, <i>, <br>, and <a data-r="Mat.8.8"> for NT references."""
+    s = html.strip()
+    s = re.sub(r"<BR\s*/?>\s*__", "<br>", s, flags=re.I)
+    s = re.sub(r"<BR\s*/?>|<br\s*/?>|<lb\s*/?>", "<br>", s, flags=re.I)
+    s = s.replace("__", "")
+
+    def ref(m):
+        target, text = m.group(1), m.group(2)
+        book = target.split(".")[0]
+        if NT_BOOK_CODES and book in NT_BOOK_CODES:
+            first = re.match(r"^([1-3A-Za-z]{3}\.\d+\.\d+)", target)
+            if first:
+                return f'<a data-r="{first.group(1)}">{text}</a>'
+        return text
+    s = re.sub(r"<ref='([^']*)'>(.*?)</ref>", ref, s)
+    # keep only the tags we allow; drop the rest but keep their text
+    s = re.sub(r"<(?!/?(?:b|i|br|a)(?:\s|>|/))[^>]*>", "", s)
+    s = re.sub(r"<a(?! data-r=)[^>]*>", "", s)
+    s = re.sub(r"(<br>\s*){2,}", "<br>", s)
+    return s.strip()
 
 
 def tyn_spelling(base, variants):
@@ -288,6 +314,18 @@ def main(src, out):
         vs[v - 1] = [[w, lex_index[s], idx(morphs, mi, mo), idx(glosses, gi, g)] for (w, s, mo, g, _, _) in toks]
 
     (out / "lexicon.json").write_text(json.dumps(lexicon, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+    # ---- dictionary definitions for the Lexicon tab (Abbott-Smith via TBESG)
+    global NT_BOOK_CODES
+    NT_BOOK_CODES = {b for b, _ in BOOKS}
+    defs = {}
+    for e in lexicon:
+        cands = [e["id"], re.sub(r"[A-Z]$", "", e["id"])] + [x for a in e.get("a", []) for x in (a, re.sub(r"[A-Z]$", "", a))]
+        t = next((tbesg[c] for c in cands if c in tbesg), None)
+        if t and t.get("def"):
+            defs[e["id"]] = [clean_def(t["def"]), t.get("tr", "")]
+    (out / "defs.json").write_text(json.dumps(defs, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"definitions: {len(defs)} of {len(lexicon)}")
     (out / "nt.json").write_text(json.dumps({"m": morphs, "g": glosses, "books": books}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     # ---- every distinct inflected form: [form, lemmaIndex, [morph codes], count, first ref]

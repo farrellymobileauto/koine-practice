@@ -51,6 +51,16 @@ Phase 3 follow-ups worth considering: glosses for LXX-only words (e.g. from a pu
 - **Catholic canon only:** 1 Esdras, 3–4 Maccabees, the Prayer of Manasseh and Psalm 151 are removed. The Apocrypha switch covers the remaining deuterocanonical books.
 - Still computer-assigned: some ambiguous forms get the wrong parsing or lemma (e.g. ὑστερήσει → ὑστέρημα), and about 5% of words (LXX-only vocabulary) have no gloss.
 
+## Lexicon, verb generator, parsing audit: done
+
+- **Lexicon tab:** search Greek, Latin transliteration or English. Each entry shows the dictionary form, gloss, gender/declension, NT and LXX counts, the full Abbott-Smith definition (NT references link into the Reader), and every form of the word in the NT with its parsing.
+- **Parse → "All verbs, every form":** 361 regular verbs used 10+ times, about 40,000 forms built from each verb's NT stems.
+  - Checks: every NT form of a tense/voice block must be reproduced exactly, or that block is dropped. All 320 verb cells of the hand-checked paradigm tables match. In a hold-out test, 99.2% of hidden NT forms were predicted exactly; the misses are NT spelling and stem variants (ἔσθω, ἀποκτέννω, ἡρπάγη/ἡρπάσθη) or tagging noise.
+  - Rules handled: contraction (-άω/-έω/-όω, incl. deponents), liquid futures, 1st/2nd aorists, Koine mixed endings (ἦλθαν, εὑράμενος, -οσαν, βούλει, καυχᾶσαι), compound-verb augments, -ηθι/-ητι, movable ν, iota subscripts, deponents (no invented actives).
+  - Left out on purpose: μι verbs, athematic -μαι verbs, root aorists (ἔγνων, ἔβην), ζάω/χράομαι, ἀπόλλυμι, ἀνοίγω, the non-indicative aorist of φέρω compounds.
+  - Forms not found in the NT are shown without accents.
+- **Parsing filter audit:** 2,475 tense/mood/chapter combinations on paradigm + real forms (1.25M checks) and 1,800 on generated forms (6.2M checks), with 0 forms or prompts outside the selection.
+
 ## Ideas parked for later
 
 - Principal parts drill (ἔρχομαι → ἐλεύσομαι, ἦλθον, ἐλήλυθα…)

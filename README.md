@@ -67,9 +67,11 @@ js/morph.js           parsing engine: parse objects, valid-parse index, chapters
 js/corpus.js          verses from the THGNT and the LXX in one shape; verse picker by difficulty/length/book
 js/grade.js           keyword grading for translations (synonyms, learned synonyms, hint penalties)
 js/views/reader.js    chapter reader with interlinear glosses
+js/views/lexicon.js   dictionary: search, Abbott-Smith definitions, every NT form of a word
+js/generate.js        builds every form of regular verbs from their NT stems (validated against the NT)
 js/views/*.js         one file per screen
 vendor/ts-fsrs.mjs    spaced-repetition scheduler (MIT)
-data/*.json           Greek data built by tools/build_data.py (lexicon, NT text, forms index, placement test)
+data/*.json           Greek data built by tools/build_data.py (lexicon, NT text, forms index, placement test, defs.json = Abbott-Smith definitions)
 data/en-nt.json       BSB English for the NT        (tools/build_lxx.py)
 data/lxx/             Brenton's Septuagint (Greek + English), one file per book (tools/build_lxx.py)
 ```
@@ -123,5 +125,6 @@ Greek that matches an NT word gets linked to it (frequency, tap-to-gloss, covera
 - Septuagint: Brenton's Greek Septuagint (1851, public domain, via eBible.org). Lemmas and parsing are computer-assigned using the THGNT tags and the Morpheus analyses from the [QuantForge LXX](https://github.com/QuantForgeSoftware/lxx) project (**CC BY-SA 4.0**). Because of that, the files in `data/lxx/` are shared under CC BY-SA 4.0.
 - English: Berean Standard Bible (public domain) and Brenton's 1851 English Septuagint (public domain, via eBible.org).
 - QR codes: [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase (MIT).
+- Dictionary: G. Abbott-Smith, *A Manual Greek Lexicon of the New Testament* (public domain), via STEPBible TBESG (CC BY 4.0).
 - Scheduling: [ts-fsrs](https://github.com/open-spaced-repetition/ts-fsrs) (MIT).
 - Fonts: Gentium Book Plus (SIL OFL) and Inter (OFL), via Google Fonts.

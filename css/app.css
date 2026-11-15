@@ -364,3 +364,10 @@ main:focus { outline: none; }
 .lex-ok { border-color: var(--good) !important; background: var(--good-soft) !important; }
 .lex-bad { border-color: var(--bad) !important; background: var(--bad-soft) !important; }
 .chips .input.greek { flex: 1; min-width: 160px; }
+
+/* ---------- Lexicon ---------- */
+.lexhead { font-size: 2rem; line-height: 1.25; }
+.lexgloss { font-size: 1.15rem; font-weight: 600; }
+.lexdef { font-family: Georgia, "Times New Roman", serif; font-size: 1rem; line-height: 1.6; }
+.lexdef b { font-family: var(--greek); }
+.lexdef a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }

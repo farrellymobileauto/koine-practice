@@ -15,6 +15,7 @@ import { parseHome } from "./views/parse.js";
 import { paradigmsHome, paradigmView } from "./views/paradigms.js";
 import { translateHome, translateVerse } from "./views/translate.js";
 import { readerView } from "./views/reader.js";
+import { lexiconHome, lexiconEntry } from "./views/lexicon.js";
 
 const NAV = [
   { id: "today", label: "Today", icon: "today" },
@@ -23,6 +24,7 @@ const NAV = [
   { id: "translate", label: "Translate", icon: "translate" },
   { id: "paradigms", label: "Paradigms", icon: "paradigms", more: true },
   { id: "reader", label: "Reader", icon: "reader", more: true },
+  { id: "lexicon", label: "Lexicon", icon: "search", more: true },
   { id: "mistakes", label: "Mistake Log", icon: "mistakes", more: true },
   { id: "profile", label: "Profile", icon: "profile", more: true },
 ];
@@ -43,6 +45,8 @@ const ROUTES = [
   [/^paradigms\/(.+)$/, (m) => (el) => paradigmView(el, decodeURIComponent(m[1]))],
   [/^translate$/, () => translateHome],
   [/^translate\/(.+)$/, (m) => (el) => translateVerse(el, decodeURIComponent(m[1]))],
+  [/^lexicon$/, () => lexiconHome],
+  [/^lexicon\/(.+)$/, (m) => (el) => lexiconEntry(el, decodeURIComponent(m[1]))],
   [/^reader$/, () => (el) => readerView(el)],
   [/^reader\/(.+)$/, (m) => (el) => readerView(el, decodeURIComponent(m[1]))],
 ];

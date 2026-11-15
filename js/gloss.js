@@ -77,7 +77,7 @@ function show(el) {
     el.dataset.cg && el.dataset.cg !== l.e ? h("div.gp-cg", "Here: ", h("em", el.dataset.cg)) : null,
     m && m.text ? h("div.gp-morph", m.text, fromLXX ? h("span.muted", " (computer-generated)") : null) : null,
     h("div.gp-meta", `${l.p} · ${l.f.toLocaleString()}× in NT · ${state}`),
-    h("div.gp-actions", sel, paradigmButton(el.dataset.m, l)));
+    h("div.gp-actions", sel, paradigmButton(el.dataset.m, l), h("a.btn.sm", { href: "#/lexicon/" + encodeURIComponent(l.id), onclick: () => closeGloss() }, icon("search", 16), "Lexicon")));
   add(document.body, pop);
   place(el);
 }

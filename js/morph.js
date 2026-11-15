@@ -216,6 +216,9 @@ function buildIndex() {
   }
 }
 
+/** The raw forms.json rows: [form, lexIndex, codes[], count, firstRef] */
+export const rawForms = () => FORMS;
+
 export function validParses(form, lemmaG) {
   return INDEX?.get(normalize(form) + "|" + lemmaKey(lemmaG)) || [];
 }
@@ -260,17 +263,28 @@ export function realItems({ minLemmaFreq = 10 } = {}) {
 
 /** Filter items by mode ("nouns"|"verbs"), chapter limit, and category selections. */
 export function filterItems(items, { mode, maxCh = 36, nounCats = null, tenses = null, moods = null }) {
-  return items.filter((it) => {
+  const fits = (p) => mode === "verbs"
+    ? (!tenses || tenses.includes(p.tense)) && (!moods || moods.includes(p.mood))
+    : !nounCats || nounCats.includes(nounCat(p));
+  const out = [];
+  for (const it of items) {
     // only the readings taught by this chapter count
     const ps = it.parses.filter((p) => (mode === "verbs" ? p.pos === "verb" : p.pos !== "verb") && chapterFor(p, it.lemma) <= maxCh);
-    if (!ps.length) return false;
-    if (mode === "verbs") {
-      // every reading must fit the selected tenses/moods, so e.g. λύσω (future or aorist subjunctive)
-      // doesn't appear when aorist is switched off
-      return ps.every((p) => (!tenses || tenses.includes(p.tense)) && (!moods || moods.includes(p.mood)));
-    }
-    return ps.some((p) => !nounCats || nounCats.includes(nounCat(p)));
-  });
+    if (!ps.length) continue;
+    // verbs: every reading must fit the selected tenses/moods, so e.g. λύσω (future or aorist subjunctive)
+    // doesn't appear when aorist is switched off
+    if (mode === "verbs" ? !ps.every(fits) : !ps.some(fits)) continue;
+    // the reading used for Produce prompts must fit too (λύω from the subjunctive table isn't a
+    // "present subjunctive" prompt when only the indicative is selected)
+    const t = it.target;
+    const tOk = t && (mode === "verbs") === (t.pos === "verb") && fits(t) && chapterFor(t, it.lemma) <= maxCh
+      && ps.some((p) => keyOf(p) === keyOf(t) || (t.voice === "MP" && keyOf({ ...p, voice: "MP" }) === keyOf(t)));
+    if (tOk || !t) { out.push(it); continue; }
+    const alt = ps.find(fits);
+    // a paradigm cell keeps its own answers only when the prompt is that cell
+    out.push({ ...it, target: alt, answers: it.source === "paradigm" ? null : it.answers });
+  }
+  return out;
 }
 
 /** Pick n items, mixing sources and favouring common forms. */

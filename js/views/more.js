@@ -19,6 +19,7 @@ export function moreView(el) {
   const item = (href, ic, title, meta, soon) => h("a.list-item", { href }, icon(ic), h("div.main", h("div.title", title), h("div.meta", meta)), soon ? h("span.badge", "soon") : null);
   add(el, h("div.page-head", h("h1", "More")),
     h("div.card", h("div.list",
+      item("#/lexicon", "search", "Lexicon", "Look up any word: definitions and every NT form"),
       item("#/mistakes", "mistakes", "Mistake Log", n ? `${n} logged` : "Nothing logged yet"),
       item("#/profile", "profile", "Profile", "Settings, Mounce chapter, sync, backup"),
       item("#/paradigms", "paradigms", "Paradigms", "Reference tables & fill-in tests"),
