@@ -1,6 +1,6 @@
 // Parsing engine: parse objects, corpus codes -> parses, ambiguity, chapters, categories, drill items.
 import { LEX, findLemma, dictForm } from "./data.js";
-import { normalize } from "./greek.js";
+import { normalize, formKey } from "./greek.js";
 import { PARADIGMS, cellsOf } from "./paradigms.js";
 
 // A parse: { pos: noun|adj|art|pron|verb, case, number, gender, person, decl, tense, voice, mood, ptype, second, mi }
@@ -183,7 +183,7 @@ const stripNu = (s) => s.replace("(ν)", "");
 const lemmaKey = (g) => normalize(g).replace(/ /g, "");
 
 function addIndex(form, lemmaG, parses) {
-  const k = normalize(form) + "|" + lemmaKey(lemmaG);
+  const k = formKey(form) + "|" + lemmaKey(lemmaG);
   const cur = INDEX.get(k) || [];
   INDEX.set(k, dedupe([...cur, ...parses]));
 }
@@ -220,7 +220,7 @@ function buildIndex() {
 export const rawForms = () => FORMS;
 
 export function validParses(form, lemmaG) {
-  return INDEX?.get(normalize(form) + "|" + lemmaKey(lemmaG)) || [];
+  return INDEX?.get(formKey(form) + "|" + lemmaKey(lemmaG)) || [];
 }
 export function formsFor(lemmaG, p) {
   if (p.voice === "MP") return [...new Set([...formsFor(lemmaG, { ...p, voice: "M" }), ...formsFor(lemmaG, { ...p, voice: "P" })])];
@@ -294,7 +294,7 @@ export function sample(items, n) {
   const seen = new Set();
   const out = [];
   for (const { it } of pool) {
-    const k = normalize(it.form) + it.lemma;
+    const k = formKey(it.form) + it.lemma;
     if (seen.has(k)) continue;
     seen.add(k); out.push(it);
     if (out.length >= n) break;

@@ -14,6 +14,11 @@ export function normalize(s) {
     .trim();
 }
 
+/** Like normalize, but an iota subscript stays distinct ("ἡμέρᾳ" -> "ημεραj"), for telling forms apart. */
+export function formKey(s) {
+  return (s || "").normalize("NFD").replace(/ͅ/g, "j").replace(COMBINING, "").toLowerCase().replace(/ς/g, "σ").replace(/[^α-ωj]/g, "");
+}
+
 export const hasGreek = (s) => /[Ͱ-Ͽἀ-῿]/.test(s || "");
 
 /** Turn a final grave accent into acute (dictionary style). */

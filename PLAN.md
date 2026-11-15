@@ -61,6 +61,11 @@ Phase 3 follow-ups worth considering: glosses for LXX-only words (e.g. from a pu
   - Forms not found in the NT are shown without accents.
 - **Parsing filter audit:** 2,475 tense/mood/chapter combinations on paradigm + real forms (1.25M checks) and 1,800 on generated forms (6.2M checks), with 0 forms or prompts outside the selection.
 
+## Paradigms in the Lexicon: done
+
+- Each Lexicon entry has a **Paradigms** section. Verbs get tables for every indicative tense, the subjunctive, imperative, infinitives and every participle. Nouns, adjectives and pronouns get a full case table. NT forms show in normal type (most common spelling first), and generated forms show in grey, unaccented. 1st/2nd-declension nouns and 2-1-2 / 2-2 adjectives are filled in only when the pattern reproduces every NT form of the word. Third-declension words and μι verbs show their NT forms only.
+- Data fixes found along the way: forms that differ only by an iota subscript are no longer merged (ἡμέρα nominative vs ἡμέρᾳ dative, which also affected Parse), and each word's headword is now its most common dictionary form (ἐγώ, not κἀγώ).
+
 ## Ideas parked for later
 
 - Principal parts drill (ἔρχομαι → ἐλεύσομαι, ἦλθον, ἐλήλυθα…)

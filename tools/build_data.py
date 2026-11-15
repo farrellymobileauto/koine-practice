@@ -41,6 +41,13 @@ REF_RE = re.compile(r"^([1-3A-Z][A-Za-z]{2})\.(\d+)\.(\d+)")
 GREEK_CHARS = re.compile(r"[Ͱ-Ͽἀ-῿]")
 
 
+def form_key(s):
+    """Like strip_marks, but an iota subscript stays distinct (ἡμέρα nominative vs ἡμέρᾳ dative)."""
+    s = unicodedata.normalize("NFD", s).replace("ͅ", "j")
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"[^α-ωj]", "", s.lower().replace("ς", "σ"))
+
+
 def strip_marks(s):
     """Lowercase, remove accents/breathings/iota subscripts, normalize final sigma."""
     s = unicodedata.normalize("NFD", s)
@@ -184,16 +191,19 @@ def main(src, out):
     proper = Counter()
     morph_by_lemma = defaultdict(Counter)
     gen_forms = defaultdict(Counter)
+    lemma_votes = defaultdict(Counter)  # the most common dictionary form wins (G1473 is ἐγώ, not κἀγώ)
     for _, toks in verses:
         for (w, s, mo, g, lem, lg) in toks:
             freq[s] += 1
             morph_by_lemma[s][mo] += 1
             if re.search(r"-(P|L|PG|LG|T)$", mo) and not mo.endswith("-T"):
                 proper[s] += 1
-            if s not in lemma_info:
-                lemma_info[s] = (lem, lg)
+            lemma_votes[s][(lem, lg)] += 1
             if re.match(r"^N-GS[MFN]", mo):
                 gen_forms[s][acute(split_punct(w)[0])] += 1
+
+    for s_, votes in lemma_votes.items():
+        lemma_info[s_] = votes.most_common(1)[0][0]
 
     # ---- one entry per word
     # STEPBible splits some lemmas by sense (G4160G, G4160H, ... all ποιέω), which would show up as
@@ -336,7 +346,7 @@ def main(src, out):
             core = acute(split_punct(w)[0])
             if not core or not GREEK_CHARS.search(core):
                 continue
-            key = (strip_marks(core), s)
+            key = (form_key(core), s)
             if key not in fidx:
                 # keep lowercase unless it's a name
                 disp = core if lexicon[lex_index[s]]["pn"] else core[0].lower() + core[1:]

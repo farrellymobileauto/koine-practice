@@ -5,6 +5,8 @@ import { normalize, hasGreek, transliterate, greekInput, decodeMorph } from "../
 import * as M from "../morph.js";
 import * as C from "../corpus.js";
 import { startStudy } from "./vocab.js";
+import { verbTables, nominalTables } from "../wordtables.js";
+import { paradigmFor } from "../morph.js";
 
 let defsPromise = null;
 const loadDefs = () => (defsPromise ||= fetch("data/defs.json").then((r) => r.json()));
@@ -146,6 +148,7 @@ export async function lexiconEntry(el, key) {
       h("div.row", sel,
         h("button.btn.sm", { onclick: () => startStudy({ wordIds: [wid], dirs: ["g2e", "e2g"], mode: "cram", title: l.g }) }, icon("vocab", 16), "Flashcard"),
         l.p === "verb" ? h("button.btn.sm", { onclick: () => import("./parse.js").then((m) => m.startParseVerb(l.g)) }, icon("parse", 16), "Parse its forms") : null)),
+    paradigmSection(l),
     def ? [h("div.section-title", "Definition (Abbott-Smith)"), h("div.card", defBox)] : null,
     formRows.length ? [h("div.section-title", `Forms in the NT · ${formRows.length}`), h("div.card", formsBox)] : null,
     h("p.tiny.muted", { style: { marginTop: "12px" } }, "Definitions: G. Abbott-Smith, A Manual Greek Lexicon of the New Testament (public domain), via STEPBible TBESG (CC BY 4.0)."));
@@ -164,4 +167,33 @@ async function lxxEntry(el, i) {
       h("div.lexgloss", x[1] || "No English gloss available"),
       h("div.chips", h("span.badge", `${x[2].toLocaleString()}× in the LXX`), h("span.badge", "not in the NT")),
       h("p.small.muted", "This word only appears in the Septuagint. Its lemma and parsing were assigned by computer, and there's no dictionary entry for it yet.")));
+}
+
+/** "Paradigms" section: full tables for this word, grouped and collapsible. */
+function paradigmSection(l) {
+  let tables = [];
+  try { tables = l.p === "verb" ? verbTables(l) : nominalTables(l); } catch (e) { console.warn(e); }
+  if (!tables.length) return null;
+  const anyGenerated = tables.some((t) => t.cells.some((r) => r.some((c) => c.some((x) => !x.attested))));
+  const groups = [...new Set(tables.map((t) => t.group))];
+  const model = (() => {
+    const p = l.p === "verb" ? { pos: "verb", tense: "P", voice: "A", mood: "I", person: "1", number: "S" } : null;
+    return p ? paradigmFor(p, l.g) : null;
+  })();
+  return [
+    h("div.section-title", "Paradigms"),
+    h("div.card.stack",
+      h("div.tiny.muted", anyGenerated
+        ? "Forms in normal type occur in the NT (with accents). Grey forms are generated from this word's NT stems and shown without accents. An empty cell means the form isn't in the NT and couldn't be generated reliably."
+        : "Every form below occurs in the NT. Empty cells are forms the NT doesn't use."),
+      groups.map((g, gi) => h("details.pgroup", { open: gi === 0 },
+        h("summary", g, h("span.small.muted", ` · ${tables.filter((t) => t.group === g).length} table${tables.filter((t) => t.group === g).length === 1 ? "" : "s"}`)),
+        tables.filter((t) => t.group === g).map((t) => h("div.ptbl",
+          tables.filter((x) => x.group === g).length > 1 || t.title !== g ? h("div.ptitle", t.title) : null,
+          h("div.table-wrap.ptable", { style: { maxHeight: "none" } }, h("table",
+            h("thead", h("tr", h("th", ""), t.cols.map((c) => h("th", c)))),
+            h("tbody", t.rows.map((r, ri) => h("tr", h("th", { scope: "row" }, r),
+              t.cells[ri].map((c) => h("td.pcell", c.length ? c.map((x, xi) => [xi ? h("span.muted", " / ") : null, h("span", { class: x.attested ? "greek" : "greek gen" }, x.form)]) : h("span.muted", "—")))))))))))),
+      model && l.p === "verb" && !anyGenerated ? h("a.btn.sm", { href: "#/paradigms/" + model.id }, "Model paradigm: " + model.title) : null),
+  ];
 }

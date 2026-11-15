@@ -5,7 +5,7 @@
 // the NT actually has (irregular verbs, consonant-stem perfects, etc.) is left out instead of guessed.
 // Generated forms that don't occur in the NT are shown without accents.
 import { LEX } from "./data.js";
-import { normalize, fixSigma } from "./greek.js";
+import { normalize, fixSigma, formKey } from "./greek.js";
 import * as M from "./morph.js";
 
 const PN = [["1", "S"], ["2", "S"], ["3", "S"], ["1", "P"], ["2", "P"], ["3", "P"]];
@@ -111,7 +111,7 @@ function join(stem, ending, contractVowel) {
   return stem + ending;
 }
 
-const n = (s) => normalize(s).replace(/ /g, "");
+const n = (s) => formKey(s); // iota subscript kept distinct (ἀγαπᾷ vs ἀγάπα)
 const variants = (e) => e.split("|");
 
 /** Build every cell of a block from a stem: [{ parse(s), forms[] (normalized) }] */
@@ -269,7 +269,8 @@ function lemmaSubscripts(form, lemma) {
 }
 
 function withBreathing(form, lemma) {
-  form = fixSigma(lemmaSubscripts(form, lemma));
+  // stems keep iota subscripts as "j" (see formKey); turn them back into ᾳ ῃ ῳ
+  form = fixSigma(form.replace(/αj/g, "ᾳ").replace(/ηj/g, "ῃ").replace(/ωj/g, "ῳ").replace(/j/g, ""));
   if (!/^[αεηιουωρ]/.test(form)) return form;
   const rough = lemma.normalize("NFD").slice(0, 3).includes("̔");
   const mark = rough ? "̔" : "̓";
@@ -346,3 +347,21 @@ export function holdOutTest(max = 2000) {
   }
   return { tested, right, wrong, spellingVariants, accuracy: tested ? +(100 * right / tested).toFixed(2) : 0, notGenerated, errors };
 }
+
+/**
+ * All generated forms of one verb, keyed by parsing (for the Lexicon's paradigm tables).
+ * Returns Map(parseKey -> [display forms]) or null if the verb isn't generated.
+ */
+export function formsByParse(lemma) {
+  generatedItems();
+  const entry = [...cache.entries()].find(([g]) => n(g) === n(lemma));
+  if (!entry) return null;
+  const [g, { byParse, spelling, rawOf }] = entry;
+  const show = (f) => spelling.get(f) || withBreathing(rawOf.get(f) || f, g);
+  const out = new Map();
+  for (const [k, forms] of byParse) out.set(k, forms.slice(0, 1).map((f) => ({ form: show(f), attested: false })));
+  return out;
+}
+
+export const parseKey = pkey;
+export { withBreathing };
