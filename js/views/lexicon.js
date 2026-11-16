@@ -7,6 +7,7 @@ import * as C from "../corpus.js";
 import { startStudy } from "./vocab.js";
 import { verbTables, nominalTables } from "../wordtables.js";
 import { paradigmFor } from "../morph.js";
+import { partsOf, PART_SHORT } from "../pparts.js";
 
 let defsPromise = null;
 const loadDefs = () => (defsPromise ||= fetch("data/defs.json").then((r) => r.json()));
@@ -148,6 +149,7 @@ export async function lexiconEntry(el, key) {
       h("div.row", sel,
         h("button.btn.sm", { onclick: () => startStudy({ wordIds: [wid], dirs: ["g2e", "e2g"], mode: "cram", title: l.g }) }, icon("vocab", 16), "Flashcard"),
         l.p === "verb" ? h("button.btn.sm", { onclick: () => import("./parse.js").then((m) => m.startParseVerb(l.g)) }, icon("parse", 16), "Parse its forms") : null)),
+    partsSection(l),
     paradigmSection(l),
     def ? [h("div.section-title", "Definition (Abbott-Smith)"), h("div.card", defBox)] : null,
     formRows.length ? [h("div.section-title", `Forms in the NT · ${formRows.length}`), h("div.card", formsBox)] : null,
@@ -167,6 +169,26 @@ async function lxxEntry(el, i) {
       h("div.lexgloss", x[1] || "No English gloss available"),
       h("div.chips", h("span.badge", `${x[2].toLocaleString()}× in the LXX`), h("span.badge", "not in the NT")),
       h("p.small.muted", "This word only appears in the Septuagint. Its lemma and parsing were assigned by computer, and there's no dictionary entry for it yet.")));
+}
+
+/** Principal parts of a verb, with flashcards for them. */
+function partsSection(l) {
+  const parts = l.p === "verb" ? partsOf(l) : null;
+  if (!parts || !parts.slice(1).some((x) => x.source !== "none")) return null;
+  const ids = S.ppIds([l]);
+  return [
+    h("div.section-title", "Principal parts"),
+    h("div.card.stack",
+      h("div.pp-strip", parts.map((x, i) => h("div.pp-cell",
+        h("div.tiny.muted", PART_SHORT[i]),
+        h("div.greek", { class: x.source === "generated" ? "pp-gen" : x.source === "none" ? "pp-none" : "" }, x.form)))),
+      parts.some((x) => x.source === "generated")
+        ? h("div.tiny.muted", "Italic: the NT uses this stem but not this exact first-person form, so it's built from the verb's NT forms. —: the NT doesn't use this part.")
+        : parts.some((x) => x.source === "none") ? h("div.tiny.muted", "—: the NT doesn't use this part.") : null,
+      h("div.row",
+        h("button.btn.sm", { onclick: () => startStudy({ wordIds: ids, dirs: ["e2g"], mode: "srs", title: l.g }) }, icon("vocab", 16), "Learn these parts"),
+        h("a.btn.sm.ghost", { href: "#/parts" }, "All principal parts"))),
+  ];
 }
 
 /** "Paradigms" section: full tables for this word, grouped and collapsible. */

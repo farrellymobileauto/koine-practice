@@ -3,6 +3,7 @@ import * as db from "./db.js";
 import { LEX, LEX_BY_ID, ALIAS, TOTAL_TOKENS, dictForm, findLemma } from "./data.js";
 import { fsrs, generatorParameters, createEmptyCard, Rating, State } from "../vendor/ts-fsrs.mjs";
 import { prepWord, prepCards } from "./prepositions.js";
+import { partsOf, ppVerbs, PART_NAMES } from "./pparts.js";
 
 export { Rating, State };
 
@@ -49,6 +50,11 @@ export function saveProfile(patch) {
 // A lexicon word only gets a stored record if the user edits it.
 export function word(id) {
   const stored = db.get("words", id);
+  if (id.startsWith("PP:")) {
+    const pp = ppWord(id);
+    if (!pp) return null;
+    return { ...pp, english: stored?.english || pp.english, edited: !!stored };
+  }
   if (id.startsWith("P:")) {
     const p = prepWord(id);
     if (!p) return null;
@@ -68,6 +74,38 @@ export function word(id) {
   if (!stored) return null;
   const l = stored.lemma ? LEX_BY_ID.get(stored.lemma) : null;
   return { ...stored, pos: l?.p || stored.pos || "", freq: l?.f || 0, lex: l || null };
+}
+
+// ---------- principal parts: "PP:<strong>:<part>" (part 1–5; part 0 is the lexical form itself) ----------
+export function ppWord(id) {
+  const [, lid, i] = id.split(":");
+  const l = LEX_BY_ID.get(lid);
+  const parts = partsOf(l);
+  const k = +i;
+  if (!parts || !parts[k] || parts[k].source === "none") return null;
+  return {
+    id, lemma: l.id, greek: parts[k].form, english: `${parts[0].form} · ${PART_NAMES[k].toLowerCase()}`,
+    pos: "verb", freq: l.f, lex: l, ppPart: k, ppLemma: parts[0].form, ppSource: parts[k].source,
+  };
+}
+/** Card ids for the principal parts of some verbs (only parts the verb has). */
+export function ppIds(lexes) {
+  const out = [];
+  for (const l of lexes) {
+    const parts = partsOf(l);
+    if (!parts) continue;
+    for (let k = 1; k < 6; k++) if (parts[k].source !== "none") out.push(`PP:${l.id}:${k}`);
+  }
+  return out;
+}
+/** Verbs in the user's own lists (for "principal parts of my verbs"). */
+export function myVerbs() {
+  const seen = new Set(); const out = [];
+  for (const rec of db.all("lists")) for (const w of rec.wordIds || []) {
+    const l = w.startsWith("L:") ? LEX_BY_ID.get(w.slice(2)) : null;
+    if (l && l.p === "verb" && partsOf(l) && !seen.has(l.id)) { seen.add(l.id); out.push(l); }
+  }
+  return out;
 }
 
 export function saveWord(w) {
@@ -101,6 +139,8 @@ const BUILTIN = [
   { id: "smart:adj", name: "Adjectives (10+ times)", test: (l) => l.p === "adjective" && l.f >= 10 },
   { id: "smart:prep", name: "Prepositions", test: (l) => l.p === "preposition" && l.f >= 5 },
   { id: "smart:prepcase", name: "Prepositions by case", desc: "One card per preposition and case: διά + genitive = through, διά + accusative = on account of", ids: () => prepCards().map((c) => c.id) },
+  { id: "smart:pp50", name: "Principal parts: core verbs (50+)", desc: "Future, aorist, perfect and aorist passive of every verb used 50+ times", ids: () => ppIds(ppVerbs(50)) },
+  { id: "smart:pp25", name: "Principal parts: verbs used 25–49 times", ids: () => ppIds(ppVerbs(25, 50)) },
   { id: "smart:conj", name: "Conjunctions, particles & adverbs (10+)", test: (l) => ["conjunction", "particle", "adverb"].includes(l.p) && l.f >= 10 },
 ];
 let builtinCache = null;
@@ -131,6 +171,7 @@ export function lists() {
   const auto = [
     { id: "auto:lookups", name: "Words I keep looking up", desc: "Looked up 2+ times with tap-to-gloss", kind: "auto", wordIds: lookupsList() },
     { id: "auto:missed", name: "Words I keep missing", desc: "Missed 2+ times", kind: "auto", wordIds: missedList() },
+    { id: "auto:mypp", name: "Principal parts of my verbs", desc: "Every verb in your own lists", kind: "auto", wordIds: ppIds(myVerbs()) },
   ];
   return [...mine, ...auto, ...smart];
 }

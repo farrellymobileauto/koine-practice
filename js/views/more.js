@@ -23,5 +23,6 @@ export function moreView(el) {
       item("#/mistakes", "mistakes", "Mistake Log", n ? `${n} logged` : "Nothing logged yet"),
       item("#/profile", "profile", "Profile", "Settings, Mounce chapter, sync, backup"),
       item("#/paradigms", "paradigms", "Paradigms", "Reference tables & fill-in tests"),
+      item("#/parts", "parse", "Principal parts", "Memorize each verb's six tense stems"),
       item("#/reader", "reader", "Reader", "Read whole chapters with tap-to-gloss"))));
 }

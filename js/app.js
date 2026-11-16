@@ -1,5 +1,6 @@
 import { initDB, onChange, isMemoryOnly } from "./db.js";
 import { loadLexicon } from "./data.js";
+import { loadPrincipal } from "./pparts.js";
 import { applyPrepGlosses } from "./prepositions.js";
 import { h, add, clear, icon, toast } from "./ui.js";
 import { initGloss, closeGloss } from "./gloss.js";
@@ -16,6 +17,7 @@ import { paradigmsHome, paradigmView } from "./views/paradigms.js";
 import { translateHome, translateVerse } from "./views/translate.js";
 import { readerView } from "./views/reader.js";
 import { lexiconHome, lexiconEntry } from "./views/lexicon.js";
+import { partsHome } from "./views/parts.js";
 
 const NAV = [
   { id: "today", label: "Today", icon: "today" },
@@ -23,6 +25,7 @@ const NAV = [
   { id: "parse", label: "Parse", icon: "parse" },
   { id: "translate", label: "Translate", icon: "translate" },
   { id: "paradigms", label: "Paradigms", icon: "paradigms", more: true },
+  { id: "parts", label: "Principal parts", icon: "paradigms", more: true },
   { id: "reader", label: "Reader", icon: "reader", more: true },
   { id: "lexicon", label: "Lexicon", icon: "search", more: true },
   { id: "mistakes", label: "Mistake Log", icon: "mistakes", more: true },
@@ -47,6 +50,7 @@ const ROUTES = [
   [/^translate\/(.+)$/, (m) => (el) => translateVerse(el, decodeURIComponent(m[1]))],
   [/^lexicon$/, () => lexiconHome],
   [/^lexicon\/(.+)$/, (m) => (el) => lexiconEntry(el, decodeURIComponent(m[1]))],
+  [/^parts$/, () => partsHome],
   [/^reader$/, () => (el) => readerView(el)],
   [/^reader\/(.+)$/, (m) => (el) => readerView(el, decodeURIComponent(m[1]))],
 ];
@@ -119,7 +123,7 @@ export function applyTheme() {
 
 async function boot() {
   await initDB();
-  try { await loadLexicon(); applyPrepGlosses(); }
+  try { await Promise.all([loadLexicon(), loadPrincipal()]); applyPrepGlosses(); }
   catch (e) {
     document.getElementById("view").innerHTML = "<div class='boot'>Couldn't load data/lexicon.json. Open this app through a local web server (see README), not by double-clicking index.html.</div>";
     return;

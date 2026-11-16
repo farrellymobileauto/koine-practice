@@ -66,6 +66,16 @@ Phase 3 follow-ups worth considering: glosses for LXX-only words (e.g. from a pu
 - Each Lexicon entry has a **Paradigms** section. Verbs get tables for every indicative tense, the subjunctive, imperative, infinitives and every participle. Nouns, adjectives and pronouns get a full case table. NT forms show in normal type (most common spelling first), and generated forms show in grey, unaccented. 1st/2nd-declension nouns and 2-1-2 / 2-2 adjectives are filled in only when the pattern reproduces every NT form of the word. Third-declension words and μι verbs show their NT forms only.
 - Data fixes found along the way: forms that differ only by an iota subscript are no longer merged (ἡμέρα nominative vs ἡμέρᾳ dative, which also affected Parse), and each word's headword is now its most common dictionary form (ἐγώ, not κἀγώ).
 
+## Principal parts: done
+
+- New **Principal parts** page (More → Principal parts): pick core verbs (50+), 25–49×, 10–24×, or the verbs in your own lists.
+  - **Flashcards**: lexical form → one part (λύω → aorist active), on the normal spaced-repetition schedule. The parts also show up as lists in Vocab ("Principal parts: core verbs", "…25–49 times", "Principal parts of my verbs").
+  - **All six**: type every part of a verb at once; each part updates its flashcard and misses go to the Mistake Log.
+  - **Stem spotting**: a real NT form (παραδόντος); pick which of the six stems it's built on, optionally with the lexical form.
+  - A reference table of every verb's parts.
+- Lexicon verb entries show the six parts with a "Learn these parts" button.
+- Where the parts come from: the verb's own NT 1st-singular form when the NT has it; a hand-checked table for about 90 irregular verbs (εἰμί, λέγω/εἶπον, ὁράω/εἶδον, ἔρχομαι and compounds, μι verbs…); otherwise the form is rebuilt from the verb's other NT forms of that stem (ἠργάσατο → ἠργασάμην, ἡτοιμασμένος → ἡτοίμασμαι), with the augment and recessive accent added by rule (the accent rule reproduces all 373 regular NT 1st-singular forms). A part is shown as "—" only when the NT never uses that stem. Parts not in the NT in that exact form are marked in italics.
+
 ## Ideas parked for later
 
 - Principal parts drill (ἔρχομαι → ἐλεύσομαι, ἦλθον, ἐλήλυθα…)

@@ -178,7 +178,8 @@ function setup(body, p) {
     h("div.card.small.muted",
       h("p", "Verbs are parsed by tense, voice, mood, person and number, with no lexical form. Participles take case, number and gender instead of person; infinitives take only tense, voice and mood."),
       h("p", "Middle and passive share forms in the present, imperfect and perfect, so either answer is right there. Deponent forms count as middle (or passive for -θη- forms)."),
-      h("p", { style: { margin: 0 } }, "Keyboard: Enter checks and moves on.")));
+      h("p", { style: { margin: 0 } }, "Keyboard: Enter checks and moves on.")),
+    p.mode === "verbs" ? h("a.card.list-item", { href: "#/parts", style: { marginTop: "12px" } }, icon("paradigms"), h("div.main", h("div.title", "Principal parts"), h("div.meta", "Stem spotting: which of the six stems is a form built on?"))) : null);
   refresh();
 }
 

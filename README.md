@@ -69,11 +69,14 @@ js/grade.js           keyword grading for translations (synonyms, learned synony
 js/views/reader.js    chapter reader with interlinear glosses
 js/views/lexicon.js   dictionary: search, Abbott-Smith definitions, every NT form of a word
 js/generate.js        builds every form of regular verbs from their NT stems (validated against the NT)
+js/principal.js       computes each verb's six principal parts (used by tools/build_principal.mjs)
+js/pparts.js          principal parts at runtime (reads data/principal.json)
 js/views/*.js         one file per screen
 vendor/ts-fsrs.mjs    spaced-repetition scheduler (MIT)
 data/*.json           Greek data built by tools/build_data.py (lexicon, NT text, forms index, placement test, defs.json = Abbott-Smith definitions)
 data/en-nt.json       BSB English for the NT        (tools/build_lxx.py)
 data/lxx/             Brenton's Septuagint (Greek + English), one file per book (tools/build_lxx.py)
+data/principal.json   principal parts of every NT verb   (node tools/build_principal.mjs)
 ```
 
 ## Rebuilding the Greek data
@@ -106,6 +109,8 @@ python -I tools/build_lxx.py data-src data
 How it works: Brenton's Greek has no tagging, so each word is looked up by form. THGNT forms win (they're tagged in context), then the Swete/Morpheus analyses, then accent-insensitive matches. After that, a noun right after an article takes that article's case, number and gender. About 97% of words get tagged, and 27,062 of 27,102 verses are kept.
 
 The canon follows the Catholic Old Testament. 1 Esdras, 3–4 Maccabees, the Prayer of Manasseh, Psalm 151, the Odes and the Psalms of Solomon are left out. The Profile switch hides the deuterocanonical books (Tobit, Judith, 1–2 Maccabees, Wisdom, Sirach, Baruch + Letter of Jeremiah, Susanna, Bel).
+
+After rebuilding the Greek data, also run `node tools/build_principal.mjs` to refresh the principal parts.
 
 ## CSV format
 

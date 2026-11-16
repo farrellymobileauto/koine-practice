@@ -5,6 +5,7 @@ import { greekInput, greekMatches, normalize, transliterate, hasGreek } from "..
 import { gk } from "../gloss.js";
 import { parseCSV, rowsToPairs, toCSV } from "../csv.js";
 import { go } from "../app.js";
+import { PART_NAMES } from "../pparts.js";
 
 const { Rating } = S;
 const LS_KEY = "koine.vocabPrefs";
@@ -312,12 +313,17 @@ export function studyView(el) {
     const g2e = cur.dir === "g2e";
     const meta = [w.pos, w.freq ? w.freq + "× in NT" : ""].filter(Boolean).join(" · ");
     const isNew = !S.card(cur.wordId, cur.dir);
+    const pp = w.ppPart != null;
+    const ppName = pp ? PART_NAMES[w.ppPart].toLowerCase() : "";
+    const ppNote = pp && w.ppSource === "generated" ? h("div.hint", "This exact form isn't in the NT; it's built from the verb's NT stem.") : null;
     const card = h("div.card.flash", { onclick: () => { if (g2e && !revealed) reveal(); } },
-      h("div.tag", DIR_LABEL[cur.dir], isNew && !cram ? " · new" : ""),
-      h("div.prompt", { class: g2e ? "greek" : "" }, g2e ? w.greek : w.english),
+      h("div.tag", pp ? (g2e ? "Principal part → which?" : "Principal parts") : DIR_LABEL[cur.dir], isNew && !cram ? " · new" : ""),
+      pp && !g2e ? h("div.prompt.greek", w.ppLemma) : h("div.prompt", { class: g2e ? "greek" : "" }, g2e ? w.greek : w.english),
+      pp && !g2e ? h("div.pp-ask", "→ ", ppName) : null,
       !g2e && w.prepCase ? h("div.hint", `preposition + ${({ G: "genitive", D: "dative", A: "accusative" })[w.prepCase]}`) : null);
     if (g2e) {
       if (!revealed) add(card, h("div.hint", "Tap or press Space to show the answer"));
+      else if (pp) add(card, h("div.answer", h("span.greek", w.ppLemma), " · ", ppName), ppNote, h("div.hint", meta));
       else add(card, h("div.answer", w.english), h("div.hint", meta));
     } else {
       const inp = greekInput(h("input.input.greek", { placeholder: "Type the Greek", value: typed, disabled: revealed }), S.profile().translit);
@@ -325,7 +331,7 @@ export function studyView(el) {
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); if (!revealed) check(inp.value); } });
       add(card, inp);
       if (!revealed) add(card, h("div.row", h("button.btn.primary", { onclick: (e) => { e.stopPropagation(); check(inp.value); } }, "Check"), h("button.btn.ghost", { onclick: (e) => { e.stopPropagation(); check(""); } }, "I don't know")));
-      else add(card, h("div.verdict", { role: "status",  class: verdict ? "ok" : "no" }, verdict ? "Correct" : typed ? "Not quite" : "Answer"), h("div.answer.greek", w.lex ? gk(w.greek, w.lex.i) : w.greek), h("div.hint", meta));
+      else add(card, h("div.verdict", { role: "status",  class: verdict ? "ok" : "no" }, verdict ? "Correct" : typed ? "Not quite" : "Answer"), h("div.answer.greek", w.lex && !pp ? gk(w.greek, w.lex.i) : w.greek), ppNote, h("div.hint", meta));
       if (!revealed) setTimeout(() => inp.focus(), 20);
     }
     add(stage, card);
@@ -363,7 +369,7 @@ export function studyView(el) {
     if (r === Rating.Again && firstTime) {
       missed.push(cur.wordId);
       S.logMistake({
-        kind: "vocab", category: "Vocab · " + (w.pos || "word"), wordId: w.id, lemma: w.lemma || null,
+        kind: "vocab", category: w.ppPart != null ? "Principal parts" : "Vocab · " + (w.pos || "word"), wordId: w.id, lemma: w.lemma || null,
         prompt: cur.dir === "g2e" ? w.greek : w.english, expected: cur.dir === "g2e" ? w.english : w.greek,
         answer: cur.dir === "e2g" ? typed : "", dir: cur.dir,
       });
